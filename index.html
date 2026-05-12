@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixel Studio Pro (GIF & Background Fix)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <style>
+        :root {
+            --bg-color: #1e1e24; --panel-color: #2b333e; --border-color: #3b4554;
+            --text-color: #e2e8f0; --text-muted: #94a3b8; --accent-color: #3b82f6; 
+            --accent-hover: #60a5fa; --danger-color: #ef4444; --success-color: #10b981;
+            --warning-color: #f59e0b; --tool-active: #f59e0b; --layer-bg: #1a1f26;
+        }
+
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color); color: var(--text-color);
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; margin: 0; padding: 15px; user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .top-bar {
+            width: 100%; max-width: 1100px; background-color: var(--panel-color);
+            border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .top-bar h1 { margin: 0; font-size: 1.2rem; color: #fff; letter-spacing: 1px; }
+        .top-bar-actions { display: flex; gap: 10px; align-items: center; }
+
+        .main-layout {
+            display: flex; gap: 15px; width: 100%; max-width: 1100px;
+            justify-content: center; align-items: flex-start; flex-wrap: wrap; 
+        }
+
+        .panel {
+            background-color: var(--panel-color); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 15px; display: flex; flex-direction: column;
+            gap: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .left-panel { width: 240px; flex-shrink: 0; }
+        .panel-section { display: flex; flex-direction: column; gap: 8px; }
+        .panel-title { font-size: 0.75rem; color: var(--text-muted); font-weight: bold; text-transform: uppercase; }
+
+        .tools-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .tool-btn {
+            height: 40px; background: var(--layer-bg); border: 1px solid var(--border-color);
+            border-radius: 6px; color: white; cursor: pointer; font-size: 1rem;
+            display: flex; justify-content: center; align-items: center; transition: 0.2s;
+        }
+        .tool-btn:hover { background: var(--border-color); }
+        .tool-btn.active { border-color: var(--tool-active); background: rgba(245, 158, 11, 0.15); box-shadow: inset 0 0 0 1px var(--tool-active); }
+
+        .settings-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+        select, input[type="text"], input[type="number"] {
+            background: var(--layer-bg); color: white; border: 1px solid var(--border-color);
+            padding: 6px 8px; border-radius: 4px; font-size: 0.85rem; outline: none;
+        }
+        select:focus, input:focus { border-color: var(--accent-color); }
+
+        .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+        .color-swatch { width: 100%; height: 36px; border-radius: 4px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); transition: 0.1s; }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.selected { border: 2px solid white; box-shadow: 0 0 8px rgba(255,255,255,0.5); transform: scale(1.1); }
+
+        .center-panel { flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 512px; }
+
+        .canvas-wrapper {
+            position: relative; background-color: #fff;
+            background-image: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%);
+            background-size: 20px 20px; cursor: crosshair; width: 100vw; height: 100vw;
+            max-width: 512px; max-height: 512px; border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); overflow: hidden;
+        }
+
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+        #onionCanvas { z-index: 1; opacity: 0.4; pointer-events: none; }
+        #gridCanvas { z-index: 999; pointer-events: none; }
+        #layersContainer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+
+        .frame-controls {
+            width: 100%; background: var(--panel-color); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .right-panel { width: 260px; flex-shrink: 0; }
+
+        .preview-box {
+            width: 128px; height: 128px; margin: 0 auto; background-color: white;
+            border: 1px solid var(--border-color); border-radius: 6px; image-rendering: pixelated;
+        }
+
+        .layer-list {
+            width: 100%; display: flex; flex-direction: column-reverse; gap: 4px;
+            max-height: 160px; overflow-y: auto; background: var(--layer-bg); padding: 4px; border-radius: 6px;
+        }
+        .layer-item {
+            display: flex; justify-content: space-between; align-items: center; background: var(--panel-color); padding: 8px 10px; border-radius: 4px;
+            cursor: pointer; border: 1px solid transparent; font-size: 0.85rem; transition: 0.1s;
+        }
+        .layer-item:hover { background: #333d4b; }
+        .layer-item.active { border-color: var(--accent-color); background: rgba(59, 130, 246, 0.1); }
+        .layer-item.dragging { opacity: 0.5; border: 1px dashed var(--accent-color); }
+        .layer-item.drag-over-top { border-top: 2px solid var(--success-color); }
+        .layer-item.drag-over-bottom { border-bottom: 2px solid var(--success-color); }
+
+        .layer-action-btns { display: flex; gap: 4px; }
+        .layer-action-btns button { padding: 4px; background: var(--border-color); color: var(--text-color); width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; }
+        
+        button {
+            background-color: var(--border-color); color: var(--text-color); border: none; padding: 8px 12px; border-radius: 6px;
+            cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s ease;
+        }
+        button:hover { filter: brightness(1.2); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background-color: var(--accent-color); color: white; }
+        button.primary:hover { background-color: var(--accent-hover); }
+        button.danger { background-color: var(--danger-color); color: white; }
+        button.success { background-color: var(--success-color); color: white; }
+        button.warning { background-color: var(--warning-color); color: #fff; }
+        
+        .flex-row { display: flex; gap: 8px; width: 100%; }
+        .flex-row > button { flex: 1; }
+
+        @media (max-width: 860px) {
+            .left-panel { width: 100%; flex-direction: row; flex-wrap: wrap; }
+            .left-panel .panel-section { flex: 1; min-width: 200px; }
+            .right-panel { width: 100%; max-width: 512px; }
+            .main-layout { gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <h1>👾 Pixel Studio Pro</h1>
+        <div class="top-bar-actions">
+            <button onclick="undo()" title="실행 취소">↩️</button>
+            <button onclick="redo()" title="다시 실행">↪️</button>
+            <div style="width: 1px; height: 20px; background: var(--border-color); margin: 0 5px;"></div>
+            <button onclick="document.getElementById('fileInput').click()">📂 열기</button>
+            <input type="file" id="fileInput" accept=".json" onchange="loadProject(this)" hidden>
+            <button onclick="saveProject()" class="primary">💾 저장</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        
+        <aside class="panel left-panel">
+            <div class="panel-section">
+                <div class="panel-title">Tools</div>
+                <div class="tools-grid">
+                    <button class="tool-btn active" id="btn-pen" onclick="setTool('pen')" title="펜">✏️</button>
+                    <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')" title="지우개">🧽</button>
+                    <button class="tool-btn" id="btn-bucket" onclick="setTool('bucket')" title="채우기">🪣</button>
+                    <button class="tool-btn" id="btn-text" onclick="setTool('text')" title="텍스트 입력">🔤</button>
+                    <button class="tool-btn" id="btn-line" onclick="setTool('line')" title="선">➖</button>
+                    <button class="tool-btn" id="btn-rect" onclick="setTool('rect')" title="사각형">⬜</button>
+                    <button class="tool-btn" id="btn-circle" onclick="setTool('circle')" title="원">⭕</button>
+                    <button class="tool-btn" id="btn-triangle" onclick="setTool('triangle')" title="삼각형">△</button>
+                </div>
+                <div id="textOptions" class="text-input-group" style="margin-top: 5px;">
+                    <input type="text" id="textInputStr" placeholder="텍스트" style="flex: 1;">
+                    <input type="number" id="textSizeInput" value="12" style="width:50px;">
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-color); width: 100%;">
+
+            <div class="panel-section">
+                <div class="panel-title">Colors</div>
+                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 5px;">
+                    <input type="color" id="colorPicker" value="#000000" style="width: 40px; height: 40px; padding: 0; border: none; border-radius: 4px; cursor: pointer;">
+                    <button onclick="addColorToPalette()" class="primary" style="flex: 1;">+ 색상 추가</button>
+                </div>
+                <div class="palette" id="palette"></div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-color); width: 100%;">
+
+            <div class="panel-section">
+                <div class="panel-title">Settings</div>
+                <div class="settings-row">
+                    <label>해상도</label>
+                    <select id="sizeSelect">
+                        <option value="16">16 x 16</option>
+                        <option value="32" selected>32 x 32</option>
+                        <option value="64">64 x 64</option>
+                        <option value="128">128 x 128</option>
+                        <option value="256">256 x 256</option>
+                    </select>
+                </div>
+                <div class="settings-row" style="margin-top: 5px;">
+                    <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="gridToggle" checked> 격자</label>
+                    <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="onionToggle" checked> 어니언 스킨</label>
+                </div>
+                <button onclick="clearCurrentFrame()" class="danger" style="margin-top: 8px;">🗑 현재 캔버스 비우기</button>
+            </div>
+        </aside>
+
+        <main class="center-panel">
+            <div class="canvas-wrapper" id="mainCanvasWrapper">
+                <canvas id="onionCanvas" width="512" height="512"></canvas>
+                <div id="layersContainer"></div>
+                <canvas id="gridCanvas" width="512" height="512"></canvas>
+            </div>
+
+            <div class="frame-controls">
+                <button onclick="prevFrame()">◀ 이전 프레임</button>
+                <span id="frameIndicator" style="font-weight: bold; min-width: 60px; text-align: center;">1 / 1</span>
+                <button onclick="nextFrame()">다음 프레임 ▶</button>
+            </div>
+        </main>
+
+        <aside class="panel right-panel">
+            <div class="panel-section">
+                <div class="panel-title">Layers</div>
+                <div class="layer-list" id="layerListUI"></div>
+                <div class="flex-row">
+                    <button onclick="addLayer()" class="success">➕ 레이어 추가</button>
+                    <button onclick="mergeDownLayer()">👇 병합</button>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-color); width: 100%;">
+
+            <div class="panel-section">
+                <div class="panel-title">Animation</div>
+                <div style="display:flex; justify-content:center;">
+                    <canvas id="previewCanvas" class="preview-box" width="128" height="128"></canvas>
+                </div>
+                
+                <div class="settings-row" style="margin-top: 5px;">
+                    <label>재생 속도</label>
+                    <input type="number" id="fpsRange" min="1" max="24" value="8" style="width: 60px; text-align: center;">
+                </div>
+                <button id="playBtn" onclick="togglePlay()" class="primary">▶ 재생 시작</button>
+
+                <div class="flex-row" style="margin-top: 5px;">
+                    <button onclick="addFrame()">+ 프레임</button>
+                    <button onclick="duplicateFrame()">📄 복사</button>
+                </div>
+                <button onclick="deleteFrame()" class="danger">🗑 프레임 삭제</button>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-color); width: 100%;">
+
+            <div class="panel-section">
+                <div class="panel-title">Export Options</div>
+                <div class="settings-row">
+                    <label style="display:flex; align-items:center; gap:5px;">
+                        <input type="checkbox" id="bgTransparent" checked onchange="toggleBgColor()"> 투명 배경
+                    </label>
+                </div>
+                <div class="settings-row" id="bgColorWrapper" style="opacity: 0.5;">
+                    <label>배경 색상</label>
+                    <input type="color" id="exportBgColor" value="#ffffff" disabled style="width: 40px; height: 30px; padding: 0; border: none; border-radius: 4px; cursor: pointer;">
+                </div>
+                <button onclick="exportGIF()" class="warning" style="margin-top: 5px;">💾 GIF 파일 다운로드</button>
+                <div id="exportStatus" style="font-size: 0.8rem; text-align: center; font-weight: bold; margin-top: 5px; color: var(--success-color);"></div>
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        try {
+            const canvasWidth = 512, canvasHeight = 512;
+            let gridSize = 32, pixelSize = canvasWidth / gridSize;
+            
+            let frames = [], currentFrameIndex = 0, currentLayerIndex = 0;
+            let layerCanvases = [], layerCtxs = [];
+            let history = []; 
+            let isDrawing = false, isDrawingShape = false, currentColor = '#000000', currentTool = 'pen';
+            let shapeStartX = 0, shapeStartY = 0, tempImageData = null;
+            let isPlaying = false, playInterval, fps = 8;
+            let savedColors = ['#000000', '#7f7f7f', '#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#ffffff'];
+
+            let lastX = -1, lastY = -1;
+            let draggedLayerIndex = null;
+
+            const gridCtx = document.getElementById('gridCanvas').getContext('2d');
+            const onionCtx = document.getElementById('onionCanvas').getContext('2d');
+            const previewCtx = document.getElementById('previewCanvas').getContext('2d');
+            const layersContainer = document.getElementById('layersContainer');
+
+            function getCtx() { return layerCtxs[currentLayerIndex]; }
+
+            function createEmptyImageData() {
+                const c = document.createElement('canvas'); c.width = canvasWidth; c.height = canvasHeight;
+                return c.getContext('2d').createImageData(canvasWidth, canvasHeight);
+            }
+
+            function init() {
+                renderPalette(); 
+                updateGridSize(); 
+                startPreview();
+
+                const wrapper = document.getElementById('mainCanvasWrapper');
+                
+                wrapper.addEventListener('touchstart', (e) => { e.preventDefault(); }, { passive: false });
+                wrapper.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+                wrapper.addEventListener('pointerdown', handleStart);
+                wrapper.addEventListener('pointermove', handleMove);
+                window.addEventListener('pointerup', handleEnd);
+                wrapper.addEventListener('pointerleave', handleEnd);
+
+                document.getElementById('sizeSelect').addEventListener('change', updateGridSize);
+                document.getElementById('gridToggle').addEventListener('change', drawGrid);
+                document.getElementById('onionToggle').addEventListener('change', drawOnionSkin);
+                document.getElementById('fpsRange').addEventListener('input', (e) => { fps = e.target.value; });
+                document.getElementById('colorPicker').addEventListener('input', (e) => setColor(e.target.value));
+            }
+
+            // GIF 배경 설정 토글
+            function toggleBgColor() {
+                const isTransparent = document.getElementById('bgTransparent').checked;
+                const bgPicker = document.getElementById('exportBgColor');
+                const wrapper = document.getElementById('bgColorWrapper');
+                bgPicker.disabled = isTransparent;
+                wrapper.style.opacity = isTransparent ? '0.5' : '1';
+            }
+            window.toggleBgColor = toggleBgColor; // 전역 등록
+
+            function getGridPos(e) {
+                const rect = document.getElementById('mainCanvasWrapper').getBoundingClientRect();
+                const clientX = e.clientX || (e.touches && e.touches.length > 0 ? e.touches[0].clientX : 0);
+                const clientY = e.clientY || (e.touches && e.touches.length > 0 ? e.touches[0].clientY : 0);
+                
+                const scaleX = canvasWidth / rect.width;
+                const scaleY = canvasHeight / rect.height;
+
+                const x = Math.floor(((clientX - rect.left) * scaleX) / pixelSize);
+                const y = Math.floor(((clientY - rect.top) * scaleY) / pixelSize);
+
+                if (x < 0 || x >= gridSize || y < 0 || y >= gridSize) return null;
+                return { x, y };
+            }
+
+            function handleStart(e) {
+                if(e.pointerType === 'mouse' && e.button !== 0) return; 
+                const pos = getGridPos(e);
+                if (!pos) return;
+
+                if (currentTool === 'bucket') {
+                    saveHistoryState(); fillTool(pos); saveCurrentLayerToData();
+                } else if (['line', 'rect', 'circle', 'triangle'].includes(currentTool)) {
+                    saveHistoryState(); isDrawingShape = true;
+                    shapeStartX = pos.x; shapeStartY = pos.y;
+                    tempImageData = getCtx().getImageData(0, 0, canvasWidth, canvasHeight);
+                } else if (currentTool === 'text') {
+                    insertTextAt(pos);
+                } else {
+                    saveHistoryState(); isDrawing = true;
+                    drawPixelAt(pos.x, pos.y); lastX = pos.x; lastY = pos.y;
+                }
+            }
+
+            function handleMove(e) {
+                const pos = getGridPos(e); if (!pos) return;
+                if (isDrawingShape) {
+                    getCtx().putImageData(tempImageData, 0, 0);
+                    if (currentTool === 'line') drawShapeLine(shapeStartX, shapeStartY, pos.x, pos.y);
+                    else if (currentTool === 'rect') drawShapeRect(shapeStartX, shapeStartY, pos.x, pos.y);
+                    else if (currentTool === 'triangle') drawShapeTriangle(shapeStartX, shapeStartY, pos.x, pos.y);
+                    else if (currentTool === 'circle') drawShapeCircle(shapeStartX, shapeStartY, pos.x, pos.y);
+                } else if (isDrawing) {
+                    if (lastX !== -1) drawInterpolatedLine(lastX, lastY, pos.x, pos.y);
+                    else drawPixelAt(pos.x, pos.y);
+                    lastX = pos.x; lastY = pos.y;
+                }
+            }
+
+            function handleEnd() {
+                if (isDrawing || isDrawingShape) {
+                    isDrawing = false; isDrawingShape = false;
+                    lastX = -1; lastY = -1; saveCurrentLayerToData();
+                }
+            }
+
+            function drawPixelAt(x, y) {
+                const ctx = getCtx();
+                if (x < 0 || x >= gridSize || y < 0 || y >= gridSize) return;
+                if (currentTool === 'eraser') ctx.clearRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                else { ctx.fillStyle = currentColor; ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize); }
+            }
+
+            function drawInterpolatedLine(x0, y0, x1, y1) {
+                let dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+                let sx = (x0 < x1) ? 1 : -1, sy = (y0 < y1) ? 1 : -1; let err = dx - dy;
+                while (true) {
+                    drawPixelAt(x0, y0); if (x0 === x1 && y0 === y1) break;
+                    let e2 = 2 * err; if (e2 > -dy) { err -= dy; x0 += sx; } if (e2 < dx) { err += dx; y0 += sy; }
+                }
+            }
+
+            function insertTextAt(pos) {
+                const textStr = document.getElementById('textInputStr').value;
+                if (!textStr) { alert("글자를 입력해주세요!"); return; }
+                const tSize = parseInt(document.getElementById('textSizeInput').value) || 12;
+                saveHistoryState(); 
+                const tempC = document.createElement('canvas'); tempC.width = gridSize; tempC.height = gridSize;
+                const tCtx = tempC.getContext('2d'); tCtx.imageSmoothingEnabled = false;
+                tCtx.font = `${tSize}px sans-serif`; tCtx.textBaseline = "top";
+                tCtx.fillStyle = "black"; tCtx.fillText(textStr, pos.x, pos.y);
+                const imgData = tCtx.getImageData(0, 0, gridSize, gridSize).data;
+                const activeCtx = getCtx();
+                for(let y=0; y<gridSize; y++) {
+                    for(let x=0; x<gridSize; x++) {
+                        const alpha = imgData[(y * gridSize + x) * 4 + 3];
+                        if (alpha > 128) { activeCtx.fillStyle = currentColor; activeCtx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize); }
+                    }
+                }
+                saveCurrentLayerToData(); 
+            }
+
+            function fillTool(pos) {
+                const ctx = getCtx(); const imgData = ctx.getImageData(0, 0, canvasWidth, canvasHeight); const data = imgData.data;
+                const startX = pos.x * pixelSize, startY = pos.y * pixelSize; const idx = (startY * canvasWidth + startX) * 4;
+                const targetR = data[idx], targetG = data[idx+1], targetB = data[idx+2], targetA = data[idx+3];
+                const replacement = hexToRgb(currentColor);
+                if (targetR === replacement.r && targetG === replacement.g && targetB === replacement.b && targetA === 255) return;
+                const stack = [[pos.x, pos.y]]; const visited = new Set();
+                while(stack.length) {
+                    const [x, y] = stack.pop(); const key = `${x},${y}`;
+                    if (x < 0 || x >= gridSize || y < 0 || y >= gridSize || visited.has(key)) continue;
+                    const curIdx = (y * pixelSize * canvasWidth + x * pixelSize) * 4;
+                    if (data[curIdx] === targetR && data[curIdx+1] === targetG && data[curIdx+2] === targetB && data[curIdx+3] === targetA) {
+                        ctx.fillStyle = currentColor; ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                        visited.add(key); stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+                    }
+                }
+            }
+
+            function hexToRgb(hex) { const bigint = parseInt(hex.slice(1), 16); return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 }; }
+
+            function updateGridSize() {
+                gridSize = parseInt(document.getElementById('sizeSelect').value);
+                pixelSize = canvasWidth / gridSize;
+                frames = [[createEmptyImageData()]];
+                history = [[{ undoStack: [], redoStack: [] }]];
+                currentFrameIndex = 0; currentLayerIndex = 0;
+                drawGrid(); loadFrame(0);
+            }
+
+            function drawGrid() {
+                gridCtx.clearRect(0,0,512,512);
+                if(!document.getElementById('gridToggle').checked) return;
+                gridCtx.strokeStyle = 'rgba(0,0,0,0.1)'; gridCtx.beginPath();
+                for(let i=0; i<=512; i+=pixelSize) { gridCtx.moveTo(i, 0); gridCtx.lineTo(i, 512); gridCtx.moveTo(0, i); gridCtx.lineTo(512, i); }
+                gridCtx.stroke();
+            }
+
+            function renderLayersUI() {
+                const listUI = document.getElementById('layerListUI');
+                listUI.innerHTML = ''; layersContainer.innerHTML = '';
+                layerCanvases = []; layerCtxs = [];
+                const currentLayers = frames[currentFrameIndex];
+
+                currentLayers.forEach((ld, idx) => {
+                    const cvs = document.createElement('canvas'); cvs.width=512; cvs.height=512; cvs.style.zIndex = idx + 1;
+                    const ctx = cvs.getContext('2d', {willReadFrequently:true}); ctx.putImageData(ld, 0, 0);
+                    layersContainer.appendChild(cvs); layerCanvases.push(cvs); layerCtxs.push(ctx);
+                    
+                    const item = document.createElement('div');
+                    item.className = `layer-item ${idx===currentLayerIndex?'active':''}`; item.draggable = true; item.dataset.index = idx;
+                    
+                    const nameSpan = document.createElement('span'); nameSpan.innerHTML = `≡ 레이어 ${idx+1}`; nameSpan.style.pointerEvents = 'none'; 
+                    const btnGroup = document.createElement('div'); btnGroup.className = 'layer-action-btns';
+                    const downBtn = document.createElement('button'); downBtn.innerHTML = '▼'; downBtn.disabled = (idx === 0);
+                    downBtn.onclick = (e) => { e.stopPropagation(); reorderLayers(idx, idx - 1); };
+                    const upBtn = document.createElement('button'); upBtn.innerHTML = '▲'; upBtn.disabled = (idx === currentLayers.length - 1);
+                    upBtn.onclick = (e) => { e.stopPropagation(); reorderLayers(idx, idx + 1); };
+
+                    btnGroup.appendChild(downBtn); btnGroup.appendChild(upBtn);
+                    item.appendChild(nameSpan); item.appendChild(btnGroup);
+                    item.onclick = () => { currentLayerIndex = idx; renderLayersUI(); };
+
+                    item.addEventListener('dragstart', (e) => { draggedLayerIndex = idx; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => item.classList.add('dragging'), 0); });
+                    item.addEventListener('dragend', () => { item.classList.remove('dragging'); document.querySelectorAll('.layer-item').forEach(el => el.classList.remove('drag-over-top', 'drag-over-bottom')); });
+                    item.addEventListener('dragover', (e) => {
+                        e.preventDefault(); e.dataTransfer.dropEffect = 'move'; item.classList.remove('drag-over-top', 'drag-over-bottom');
+                        const rect = item.getBoundingClientRect(); const midY = rect.top + rect.height / 2;
+                        if (e.clientY < midY) item.classList.add('drag-over-top'); else item.classList.add('drag-over-bottom');
+                    });
+                    item.addEventListener('dragleave', () => item.classList.remove('drag-over-top', 'drag-over-bottom'));
+                    item.addEventListener('drop', (e) => {
+                        e.preventDefault(); item.classList.remove('drag-over-top', 'drag-over-bottom');
+                        const targetIdx = parseInt(item.dataset.index);
+                        if (draggedLayerIndex !== null && draggedLayerIndex !== targetIdx) reorderLayers(draggedLayerIndex, targetIdx);
+                    });
+                    listUI.appendChild(item);
+                });
+            }
+
+            function reorderLayers(fromIdx, toIdx) {
+                saveCurrentLayerToData(); 
+                const frame = frames[currentFrameIndex]; const hist = history[currentFrameIndex];
+                const movedLayer = frame.splice(fromIdx, 1)[0]; const movedHist = hist.splice(fromIdx, 1)[0];
+                frame.splice(toIdx, 0, movedLayer); hist.splice(toIdx, 0, movedHist);
+                if (currentLayerIndex === fromIdx) currentLayerIndex = toIdx;
+                else {
+                    if (fromIdx < currentLayerIndex && toIdx >= currentLayerIndex) currentLayerIndex--;
+                    else if (fromIdx > currentLayerIndex && toIdx <= currentLayerIndex) currentLayerIndex++;
+                }
+                renderLayersUI(); drawOnionSkin(); 
+            }
+
+            function addLayer() {
+                saveCurrentLayerToData(); frames[currentFrameIndex].push(createEmptyImageData());
+                history[currentFrameIndex].push({undoStack:[], redoStack:[]});
+                currentLayerIndex = frames[currentFrameIndex].length - 1; renderLayersUI();
+            }
+
+            function mergeDownLayer() {
+                if(currentLayerIndex === 0) return;
+                saveCurrentLayerToData();
+                const bottom = frames[currentFrameIndex][currentLayerIndex-1], top = frames[currentFrameIndex][currentLayerIndex];
+                const c = document.createElement('canvas'); c.width=512; c.height=512; const x = c.getContext('2d');
+                const bC = document.createElement('canvas'); bC.width=512; bC.height=512; bC.getContext('2d').putImageData(bottom, 0, 0);
+                const tC = document.createElement('canvas'); tC.width=512; tC.height=512; tC.getContext('2d').putImageData(top, 0, 0);
+                x.drawImage(bC, 0, 0); x.drawImage(tC, 0, 0);
+                frames[currentFrameIndex].splice(currentLayerIndex-1, 2, x.getImageData(0,0,512,512));
+                history[currentFrameIndex].splice(currentLayerIndex-1, 2, {undoStack:[], redoStack:[]});
+                currentLayerIndex--; renderLayersUI();
+            }
+
+            function saveCurrentLayerToData() { if(layerCtxs.length && layerCtxs[currentLayerIndex]) frames[currentFrameIndex][currentLayerIndex] = layerCtxs[currentLayerIndex].getImageData(0, 0, 512, 512); }
+            function loadFrame(i) {
+                if(i !== currentFrameIndex) saveCurrentLayerToData(); 
+                currentFrameIndex = i; currentLayerIndex = frames[i].length - 1;
+                renderLayersUI(); document.getElementById('frameIndicator').innerText = `${i+1} / ${frames.length}`; drawOnionSkin();
+            }
+            function addFrame() {
+                saveCurrentLayerToData(); frames.splice(currentFrameIndex+1, 0, [createEmptyImageData()]);
+                history.splice(currentFrameIndex+1, 0, [{undoStack:[], redoStack:[]}]); loadFrame(currentFrameIndex+1);
+            }
+            function duplicateFrame() {
+                saveCurrentLayerToData(); 
+                const copy = frames[currentFrameIndex].map(ld => {
+                    const c = document.createElement('canvas'); c.width=512; c.height=512;
+                    c.getContext('2d').putImageData(ld, 0, 0);
+                    return c.getContext('2d').getImageData(0, 0, 512, 512);
+                });
+                frames.splice(currentFrameIndex+1, 0, copy); history.splice(currentFrameIndex+1, 0, copy.map(()=>({undoStack:[], redoStack:[]}))); loadFrame(currentFrameIndex+1);
+            }
+            function deleteFrame() {
+                if(frames.length <= 1) { alert("최소 1개의 프레임은 존재해야 합니다."); return; }
+                frames.splice(currentFrameIndex, 1); history.splice(currentFrameIndex, 1);
+                if(currentFrameIndex >= frames.length) currentFrameIndex = frames.length - 1; loadFrame(currentFrameIndex);
+            }
+            function prevFrame() { if(currentFrameIndex > 0) loadFrame(currentFrameIndex - 1); }
+            function nextFrame() { if(currentFrameIndex < frames.length - 1) loadFrame(currentFrameIndex + 1); }
+
+            function drawOnionSkin() {
+                onionCtx.clearRect(0,0,512,512); if(!document.getElementById('onionToggle').checked || currentFrameIndex === 0) return;
+                frames[currentFrameIndex-1].forEach(ld => { const c = document.createElement('canvas'); c.width=512; c.height=512; c.getContext('2d').putImageData(ld, 0, 0); onionCtx.drawImage(c, 0, 0); });
+            }
+            function startPreview() {
+                setInterval(() => {
+                    const idx = isPlaying ? Math.floor(Date.now() / (1000/fps)) % frames.length : currentFrameIndex;
+                    previewCtx.clearRect(0,0,128,128); const c = document.createElement('canvas'); c.width=512; c.height=512; const x = c.getContext('2d');
+                    frames[idx].forEach(ld => { const lc = document.createElement('canvas'); lc.width=512; lc.height=512; lc.getContext('2d').putImageData(ld, 0, 0); x.drawImage(lc, 0, 0); });
+                    previewCtx.drawImage(c, 0, 0, 128, 128);
+                }, 50);
+            }
+            function togglePlay() { isPlaying = !isPlaying; document.getElementById('playBtn').innerText = isPlaying ? "⏸ 재생 정지" : "▶ 재생 시작"; }
+
+            function setTool(t) {
+                currentTool = t; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('btn-'+t).classList.add('active'); document.getElementById('textOptions').style.display = t === 'text' ? 'flex' : 'none';
+            }
+            function setColor(c) { currentColor = c; document.getElementById('colorPicker').value = c; }
+            function addColorToPalette() { const c = document.getElementById('colorPicker').value; if(!savedColors.includes(c)) { savedColors.push(c); renderPalette(); } }
+            function renderPalette() {
+                const p = document.getElementById('palette'); p.innerHTML = '';
+                savedColors.forEach(c => {
+                    const d = document.createElement('div'); d.className = 'color-swatch'; d.style.backgroundColor = c;
+                    if(c === currentColor) d.classList.add('selected');
+                    d.onclick = () => { setColor(c); renderPalette(); }; p.appendChild(d);
+                });
+            }
+
+            function saveHistoryState() { const h = history[currentFrameIndex][currentLayerIndex]; h.undoStack.push(getCtx().getImageData(0,0,512,512)); if(h.undoStack.length > 30) h.undoStack.shift(); h.redoStack = []; }
+            function undo() { const h = history[currentFrameIndex][currentLayerIndex]; if(!h.undoStack.length) return; h.redoStack.push(getCtx().getImageData(0,0,512,512)); getCtx().putImageData(h.undoStack.pop(), 0, 0); saveCurrentLayerToData(); }
+            function redo() { const h = history[currentFrameIndex][currentLayerIndex]; if(!h.redoStack.length) return; h.undoStack.push(getCtx().getImageData(0,0,512,512)); getCtx().putImageData(h.redoStack.pop(), 0, 0); saveCurrentLayerToData(); }
+
+            function drawShapeLine(x0, y0, x1, y1) { let dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0); let sx = (x0 < x1) ? 1 : -1, sy = (y0 < y1) ? 1 : -1; let err = dx - dy; while (true) { drawPixelAt(x0, y0); if (x0 === x1 && y0 === y1) break; let e2 = 2 * err; if (e2 > -dy) { err -= dy; x0 += sx; } if (e2 < dx) { err += dx; y0 += sy; } } }
+            function drawShapeRect(x0, y0, x1, y1) { let minX = Math.min(x0, x1), maxX = Math.max(x0, x1); let minY = Math.min(y0, y1), maxY = Math.max(y0, y1); drawShapeLine(minX, minY, maxX, minY); drawShapeLine(maxX, minY, maxX, maxY); drawShapeLine(maxX, maxY, minX, maxY); drawShapeLine(minX, maxY, minX, minY); }
+            function drawShapeTriangle(x0, y0, x1, y1) { let midX = Math.floor((x0 + x1) / 2); let minY = Math.min(y0, y1); let maxY = Math.max(y0, y1); drawShapeLine(midX, minY, x0, maxY); drawShapeLine(x0, maxY, x1, maxY); drawShapeLine(x1, maxY, midX, minY); }
+            function drawShapeCircle(x0, y0, x1, y1) { let xm = Math.floor((x0 + x1) / 2); let ym = Math.floor((y0 + y1) / 2); let r = Math.floor(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) / 2); let x = -r, y = 0, err = 2 - 2 * r; do { drawPixelAt(xm - x, ym + y); drawPixelAt(xm - y, ym - x); drawPixelAt(xm + x, ym - y); drawPixelAt(xm + y, ym + x); r = err; if (r <= y) err += ++y * 2 + 1; if (r > x || err > y) err += ++x * 2 + 1; } while (x < 0); }
+
+            function clearCurrentFrame() {
+                if(confirm("현재 캔버스의 모든 그림과 레이어를 지우시겠습니까?")) {
+                    frames[currentFrameIndex] = [createEmptyImageData()]; history[currentFrameIndex] = [{undoStack:[], redoStack:[]}]; currentLayerIndex = 0;
+                    renderLayersUI(); document.getElementById('frameIndicator').innerText = `${currentFrameIndex + 1} / ${frames.length}`; drawOnionSkin();
+                }
+            }
+
+            function saveProject() {
+                saveCurrentLayerToData();
+                const data = { gridSize, fps, palette: savedColors, frames: frames.map(layers => layers.map(ld => { const c = document.createElement('canvas'); c.width=512; c.height=512; c.getContext('2d').putImageData(ld, 0, 0); return c.toDataURL(); })) };
+                const blob = new Blob([JSON.stringify(data)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pixel_project.json'; a.click();
+            }
+
+            function loadProject(input) {
+                const file = input.files[0]; if (!file) return; const reader = new FileReader();
+                reader.onload = async (e) => { try { const data = JSON.parse(e.target.result); await loadProjectFromJSON(data); input.value = ''; } catch(err) { alert("파일을 불러오는데 실패했습니다."); console.error(err); } };
+                reader.readAsText(file);
+            }
+
+            function urlToImageData(url) {
+                return new Promise((resolve) => { const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width=512; c.height=512; c.getContext('2d').drawImage(img, 0, 0); resolve(c.getContext('2d').getImageData(0, 0, 512, 512)); }; img.src = url; });
+            }
+
+            async function loadProjectFromJSON(data) {
+                gridSize = data.gridSize || 32; document.getElementById('sizeSelect').value = gridSize; pixelSize = canvasWidth / gridSize;
+                fps = data.fps || 8; document.getElementById('fpsRange').value = fps;
+                if(data.palette) { savedColors = data.palette; renderPalette(); }
+                
+                const newFrames = []; const newHistory = [];
+                for (let fIdx = 0; fIdx < data.frames.length; fIdx++) {
+                    const frameLayers = []; const frameHistory = [];
+                    const layerArray = Array.isArray(data.frames[fIdx]) ? data.frames[fIdx] : [data.frames[fIdx]];
+                    for (let lIdx = 0; lIdx < layerArray.length; lIdx++) {
+                        const imgData = await urlToImageData(layerArray[lIdx]);
+                        frameLayers.push(imgData); frameHistory.push({undoStack:[], redoStack:[]});
+                    }
+                    newFrames.push(frameLayers); newHistory.push(frameHistory);
+                }
+
+                frames = newFrames; history = newHistory; currentFrameIndex = 0; currentLayerIndex = frames[0].length - 1;
+                drawGrid(); renderLayersUI(); document.getElementById('frameIndicator').innerText = `1 / ${frames.length}`; drawOnionSkin();
+                alert("프로젝트 로드 완료!");
+            }
+
+            // 💡 완벽하게 수정된 고화질(512x512) GIF 내보내기 로직
+            async function getGifWorkerUrl() {
+                try {
+                    const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+                    const blob = await res.blob(); return URL.createObjectURL(blob);
+                } catch(e) {
+                    return 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'; 
+                }
+            }
+
+            window.exportGIF = async function() {
+                const status = document.getElementById('exportStatus');
+                status.innerText = "⏳ 렌더링 중...";
+                try {
+                    const workerUrl = await getGifWorkerUrl();
+                    const isTransparent = document.getElementById('bgTransparent').checked;
+                    const bgColor = document.getElementById('exportBgColor').value;
+                    const exportSize = 512; // 고화질 출력을 위해 사이즈 고정
+
+                    const gifOptions = { 
+                        workers: 2, quality: 10, width: exportSize, height: exportSize, workerScript: workerUrl
+                    };
+                    
+                    // 크로마키 방식을 이용한 완벽한 투명도 처리
+                    if (isTransparent) { gifOptions.transparent = '#FF00FF'; }
+
+                    const gif = new GIF(gifOptions);
+                    
+                    for(let i=0; i<frames.length; i++) {
+                        const fC = document.createElement('canvas'); fC.width = exportSize; fC.height = exportSize; 
+                        const fX = fC.getContext('2d');
+
+                        // 배경 채우기
+                        if (isTransparent) {
+                            fX.fillStyle = '#FF00FF'; // 투명 처리될 임시 크로마키 색상
+                            fX.fillRect(0, 0, exportSize, exportSize);
+                        } else {
+                            fX.fillStyle = bgColor; // 사용자가 선택한 배경색
+                            fX.fillRect(0, 0, exportSize, exportSize);
+                        }
+
+                        // 레이어 렌더링 (업스케일링)
+                        frames[i].forEach(ld => {
+                            const lc = document.createElement('canvas'); lc.width = 512; lc.height = 512;
+                            lc.getContext('2d').putImageData(ld, 0, 0); 
+                            fX.imageSmoothingEnabled = false;
+                            fX.drawImage(lc, 0, 0, exportSize, exportSize);
+                        });
+                        
+                        gif.addFrame(fC, {copy: true, delay: 1000/fps});
+                    }
+
+                    gif.on('finished', blob => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'pixel_animation.gif';
+                        document.body.appendChild(a); // 다운로드 우회 (필수)
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        status.innerText = "✅ 다운로드 완료!";
+                        setTimeout(() => status.innerText = "", 3000);
+                    });
+
+                    gif.render();
+                } catch(e) {
+                    status.innerText = "❌ 저장 실패";
+                    alert("인터넷 연결이 필요하거나 브라우저에서 GIF 인코딩을 차단했습니다.");
+                }
+            }
+
+            window.addEventListener('DOMContentLoaded', init);
+            
+        } catch(fatalError) {
+            console.error(fatalError);
+        }
+    </script>
+</body>
+</html>
