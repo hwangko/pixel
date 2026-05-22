@@ -1,4 +1,30 @@
-<h1>찾아오시는 길</h1>
-<p>아래 지도를 확인하세요:</p>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* 이미지가 화면 너비를 초과하지 않고 가득 차도록 설정 */
+        .responsive-map {
+            width: 100%;      /* 부모 요소의 너비에 꽉 맞춤 */
+            height: auto;     /* 가로 세로 비율 유지 */
+            display: block;   /* 하단 미세 공백 제거 */
+            max-width: 1200px; /* 너무 커지는 걸 방지하려면 설정 (선택 사항) */
+            margin: 0 auto;   /* 중앙 정렬 */
+        }
 
-<img src="map.png" alt="우리 동네 지도" width="500">
+        body {
+            margin: 0;        /* 화면 여백 제거 */
+            padding: 20px;
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>수학여행 여행 일정 (찾아오시는 길)</h1>
+    <p>아래 지도를 확인하세요:</p>
+
+    <img src="map.png" alt="우리 동네 지도" class="responsive-map">
+
+</body>
+</html>
