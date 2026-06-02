@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>교과서 외형 맞추기 시뮬레이터 v6</title>
+    <style>
+        html, body { height: 100%; margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f0f4f8; overflow: hidden; }
+        
+        /* 메인 컨테이너 레이아웃 */
+        .container { display: flex; width: 100vw; height: 100vh; box-sizing: border-box; padding: 20px; gap: 20px; }
+        
+        /* 캐릭터 표시 영역 (창 크기에 맞춰 자동 최대화) */
+        .avatar-container { flex: 1.2; display: flex; flex-direction: column; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); padding: 20px; box-sizing: border-box; }
+        .avatar-area { flex: 1; border: 2px solid #e2e8f0; background-color: #f8fafc; border-radius: 15px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
+        svg { width: 100%; height: 100%; max-height: 100%; }
+
+        /* 성별 표시기 */
+        .gender-indicator { text-align: center; margin-top: 15px; font-size: 18px; font-weight: bold; color: #1e293b; background: #e2e8f0; padding: 10px; border-radius: 10px; transition: all 0.3s ease; }
+
+        /* 오른쪽 컨트롤러 영역 (스크롤 가능) */
+        .controls { flex: 1; display: flex; flex-direction: column; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); box-sizing: border-box; overflow-y: auto; height: 100%; }
+        h2 { margin-top: 0; color: #1e293b; font-size: 22px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        
+        /* 랜덤 버튼 */
+        .btn-random { background-color: #4f46e5; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .btn-random:hover { background-color: #4338ca; }
+
+        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .control-group { background: #f8fafc; padding: 10px; border-radius: 8px; border-left: 4px solid #3b82f6; box-sizing: border-box; }
+        .control-group.full { grid-column: span 2; }
+        .control-group h3 { margin: 0 0 6px 0; font-size: 14px; color: #475569; }
+        select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; color: #334155; background-color: white; cursor: pointer; box-sizing: border-box; }
+        select:disabled { background-color: #e2e8f0; cursor: not-allowed; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="avatar-container">
+        <div class="avatar-area">
+            <svg id="avatar-svg" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet">
+                <rect id="bg-rect" x="0" y="0" width="300" height="400" fill="#f8fafc" transition="fill 0.3s ease" />
+                
+                <g id="layer-body"></g>
+                <g id="layer-clothes"></g> 
+                <g id="layer-hair"></g>    
+                <g id="layer-eyes"></g>    
+                <g id="layer-glasses"></g> 
+            </svg>
+        </div>
+        <div id="gender-text" class="gender-indicator">Gender: Male (남성)</div>
+    </div>
+
+    <div class="controls">
+        <h2>
+            <span>👤 Avatar Maker v6</span>
+            <button class="btn-random" onclick="randomizeAvatar()">🎲 Random</button>
+        </h2>
+        
+        <div class="control-grid">
+            <div class="control-group">
+                <h3>1. Gender (성별)</h3>
+                <select id="gender" onchange="updateAvatar()">
+                    <option value="male">Male (남성)</option>
+                    <option value="female">Female (여성)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <h3>2. Eye Color (눈동자 색)</h3>
+                <select id="eyes" onchange="updateAvatar()">
+                    <option value="blue">Blue (파란색)</option>
+                    <option value="brown">Brown (갈색)</option>
+                    <option value="green">Green (초록색)</option>
+                    <option value="black">Black (검은색)</option>
+                    <option value="red">Red (빨간색)</option>
+                    <option value="yellow">Yellow (노란색)</option>
+                    <option value="orange">Orange (주황색)</option>
+                    <option value="purple">Purple (보라색)</option>
+                    <option value="pink">Pink (분홍색)</option>
+                    <option value="gray">Gray (회색)</option>
+                    <option value="white">White (하얀색)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <h3>3. Hair Style (머리 모양)</h3>
+                <select id="hairStyle" onchange="updateAvatar()">
+                    <option value="short">Short (짧은 머리)</option>
+                    <option value="long">Long (긴 머리)</option>
+                    <option value="curly">Curly (곱슬 머리)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <h3>4. Hair Color (머리 색)</h3>
+                <select id="hairColor" onchange="updateAvatar()">
+                    <option value="brown">Brown (갈색)</option>
+                    <option value="black">Black (검은색)</option>
+                    <option value="gray">Gray (회색)</option>
+                    <option value="yellow">Yellow (노란색)</option>
+                    <option value="red">Red (빨간색)</option>
+                    <option value="blue">Blue (파란색)</option>
+                    <option value="green">Green (초록색)</option>
+                    <option value="orange">Orange (주황색)</option>
+                    <option value="purple">Purple (보라색)</option>
+                    <option value="pink">Pink (분홍색)</option>
+                    <option value="white">White (하얀색)</option>
+                </select>
+            </div>
+
+            <div class="control-group full">
+                <h3>5. Clothes Style (의상 스타일)</h3>
+                <select id="clothesStyle" onchange="updateAvatar()">
+                    <option value="shirt_pants">Shirt & Pants (셔츠와 긴바지)</option>
+                    <option value="dress">Dress (원피스 드레스)</option>
+                    <option value="shirt_shorts">Shirt & Shorts (셔츠와 반바지)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <h3>6. Top / Dress Color (상의/드레스 색)</h3>
+                <select id="shirtColor" onchange="updateAvatar()">
+                    <option value="white">White (하얀색)</option>
+                    <option value="red">Red (빨간색)</option>
+                    <option value="blue">Blue (파란색)</option>
+                    <option value="green">Green (초록색)</option>
+                    <option value="yellow">Yellow (노란색)</option>
+                    <option value="orange">Orange (주황색)</option>
+                    <option value="purple">Purple (보라색)</option>
+                    <option value="pink">Pink (분홍색)</option>
+                    <option value="brown">Brown (갈색)</option>
+                    <option value="black">Black (검은색)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <h3>7. Pants Color (바지 색)</h3>
+                <select id="pantsColor" onchange="updateAvatar()">
+                    <option value="blue">Blue (파란색)</option>
+                    <option value="white">White (하얀색)</option>
+                    <option value="red">Red (빨간색)</option>
+                    <option value="green">Green (초록색)</option>
+                    <option value="yellow">Yellow (노란색)</option>
+                    <option value="orange">Orange (주황색)</option>
+                    <option value="purple">Purple (보라색)</option>
+                    <option value="pink">Pink (분홍색)</option>
+                    <option value="brown">Brown (갈색)</option>
+                    <option value="black">Black (검은색)</option>
+                </select>
+            </div>
+
+            <div class="control-group full">
+                <h3>8. Glasses (안경)</h3>
+                <select id="glasses" onchange="updateAvatar()">
+                    <option value="none">None (없음)</option>
+                    <option value="black">Black Glasses (검은색)</option>
+                    <option value="red">Red Glasses (빨간색)</option>
+                    <option value="green">Green Glasses (초록색)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 11가지 표준 컬러 헥사 코드 값
+    const colorMap = {
+        red: '#ef4444', blue: '#3b82f6', green: '#22c55e', yellow: '#eab308',
+        orange: '#f97316', purple: '#a855f7', pink: '#ec4899', black: '#1e293b',
+        white: '#ffffff', brown: '#78350f', gray: '#94a3b8'
+    };
+
+    // ★요청사항: 옷 색상에 맞춰 캐릭터가 가장 예쁘게 도드라지는 배경색 매핑 표
+    const bgContrastMap = {
+        white: '#334155',  // 하얀색 옷/머리일 때는 짙은 블루그레이 배경으로 확실한 대비!
+        red: '#f0fdf4',    // 빨간 옷 -> 연초록 배경
+        blue: '#fef3c7',   // 파란 옷 -> 연노랑 배경
+        green: '#fdf2f8',  // 초록 옷 -> 연분홍 배경
+        yellow: '#ecefff', // 노란 옷(드레스 등) -> 연보라빛 도는 차분한 배경
+        orange: '#f0f9ff', // 주황 옷 -> 시원한 연하늘 배경
+        purple: '#f0fdf4', // 보라 옷 -> 싱그러운 연두 배경
+        pink: '#f0fdfa',   // 핑크 옷 -> 맑은 민트색 배경
+        brown: '#f8fafc',  // 갈색 옷 -> 밝은 화이트그레이 배경
+        black: '#f1f5f9',  // 검은 옷 -> 밝은 그레이 배경
+        gray: '#fafafa'    // 회색 머리/옷 -> 깔끔한 화이트 배경
+    };
+
+    function updateAvatar() {
+        const gender = document.getElementById('gender').value;
+        const eyes = document.getElementById('eyes').value;
+        const hairStyle = document.getElementById('hairStyle').value;
+        const hairColor = document.getElementById('hairColor').value;
+        const clothesStyle = document.getElementById('clothesStyle').value;
+        const shirtColor = document.getElementById('shirtColor').value;
+        const pantsColor = document.getElementById('pantsColor').value;
+        const glasses = document.getElementById('glasses').value;
+
+        // ★요청사항: 선택된 옷 색상 조합에 맞춰 실시간으로 배경 사각형 색상 변경
+        const bgRect = document.getElementById('bg-rect');
+        bgRect.setAttribute('fill', bgContrastMap[shirtColor] || '#f8fafc');
+
+        // 하단 성별 텍스트 인디케이터 업데이트
+        const genderTextDiv = document.getElementById('gender-text');
+        if (gender === 'male') {
+            genderTextDiv.innerHTML = "Gender: Male (남성)";
+            genderTextDiv.style.backgroundColor = "#e0f2fe";
+            genderTextDiv.style.color = "#0369a1";
+        } else {
+            genderTextDiv.innerHTML = "Gender: Female (여성)";
+            genderTextDiv.style.backgroundColor = "#fce7f3";
+            genderTextDiv.style.color = "#be185d";
+        }
+
+        const skinColor = (gender === 'male') ? '#e2cfa7' : '#ffe4c4';
+
+        // 드레스 선택 시 바지 비활성화
+        const pantsSelect = document.getElementById('pantsColor');
+        if (clothesStyle === 'dress') {
+            pantsSelect.disabled = true;
+        } else {
+            pantsSelect.disabled = false;
+        }
+
+        // 1. 몸체 레이어
+        document.getElementById('layer-body').innerHTML = `
+            <rect x="142" y="150" width="16" height="30" fill="${skinColor}" />
+            <circle cx="150" cy="120" r="35" fill="${skinColor}" />
+            <rect x="118" y="250" width="24" height="110" fill="${skinColor}" opacity="0.3"/>
+            <rect x="158" y="250" width="24" height="110" fill="${skinColor}" opacity="0.3"/>
+        `;
+
+        // 2. 의상 레이어
+        const sHex = colorMap[shirtColor];
+        const pHex = colorMap[pantsColor];
+        const sStroke = (shirtColor === 'white') ? '#cbd5e1' : sHex;
+        const pStroke = (pantsColor === 'white') ? '#cbd5e1' : pHex;
+
+        let clothesHTML = '';
+        if (clothesStyle === 'shirt_pants') {
+            clothesHTML = `
+                <path d="M 110,170 L 190,170 L 185,250 L 115,250 Z" fill="${sHex}" stroke="${sStroke}" stroke-width="1"/>
+                <path d="M 135,170 Q 150,185 165,170 Z" fill="${skinColor}" />
+                <rect x="115" y="250" width="32" height="95" fill="${pHex}" stroke="${pStroke}" stroke-width="1" rx="3"/>
+                <rect x="153" y="250" width="32" height="95" fill="${pHex}" stroke="${pStroke}" stroke-width="1" rx="3"/>
+            `;
+        } else if (clothesStyle === 'dress') {
+            clothesHTML = `
+                <path d="M 110,170 L 190,170 L 215,305 L 85,305 Z" fill="${sHex}" stroke="${sStroke}" stroke-width="1"/>
+                <path d="M 135,170 Q 150,185 165,170 Z" fill="${skinColor}" />
+            `;
+        } else if (clothesStyle === 'shirt_shorts') {
+            clothesHTML = `
+                <path d="M 110,170 L 190,170 L 185,250 L 115,250 Z" fill="${sHex}" stroke="${sStroke}" stroke-width="1"/>
+                <path d="M 135,170 Q 150,185 165,170 Z" fill="${skinColor}" />
+                <rect x="115" y="250" width="32" height="40" fill="${pHex}" stroke="${pStroke}" stroke-width="1" rx="2"/>
+                <rect x="153" y="250" width="32" height="40" fill="${pHex}" stroke="${pStroke}" stroke-width="1" rx="2"/>
+            `;
+        }
+        document.getElementById('layer-clothes').innerHTML = clothesHTML;
+
+        // 3. 머리카락 레이어
+        const hHex = colorMap[hairColor];
+        const hStroke = (hairColor === 'white' || hairColor === 'yellow') ? '#cbd5e1' : hHex;
+        if (hairStyle === 'short') {
+            document.getElementById('layer-hair').innerHTML = `
+                <path d="M 110,115 Q 150,65 190,115 Q 195,90 150,80 Q 105,90 110,115 Z" fill="${hHex}" stroke="${hStroke}" stroke-width="1"/>
+            `;
+        } else if (hairStyle === 'long') {
+            document.getElementById('layer-hair').innerHTML = `
+                <path d="M 110,115 Q 150,65 190,115 L 195,210 L 180,210 L 182,130 L 118,130 L 120,210 L 105,210 Z" fill="${hHex}" stroke="${hStroke}" stroke-width="1"/>
+                <path d="M 110,115 Q 150,75 190,115 Q 185,90 150,83 Q 115,90 110,115 Z" fill="${hHex}" stroke="${hStroke}" stroke-width="1"/>
+            `;
+        } else if (hairStyle === 'curly') {
+            document.getElementById('layer-hair').innerHTML = `
+                <path d="M 110,125 
+                         A 15,15 0 0,1 102,100 
+                         A 16,16 0 0,1 118,78 
+                         A 20,20 0 0,1 150,66 
+                         A 20,20 0 0,1 182,78 
+                         A 16,16 0 0,1 198,100 
+                         A 15,15 0 0,1 190,125 
+                         Q 150,112 110,125 Z" fill="${hHex}" stroke="${hStroke}" stroke-width="1"/>
+            `;
+        }
+
+        // 4. 눈동자 레이어
+        const eHex = colorMap[eyes];
+        const eStroke = (eyes === 'white') ? '#cbd5e1' : 'none';
+        document.getElementById('layer-eyes').innerHTML = `
+            <circle cx="134" cy="118" r="11" fill="white" stroke="#cbd5e1" stroke-width="1" />
+            <circle cx="134" cy="118" r="7" fill="${eHex}" stroke="${eStroke}" stroke-width="0.5" />
+            <circle cx="134" cy="118" r="3" fill="black" />
+            <circle cx="131" cy="115" r="2" fill="white" /> 
+            
+            <circle cx="166" cy="118" r="11" fill="white" stroke="#cbd5e1" stroke-width="1" />
+            <circle cx="166" cy="118" r="7" fill="${eHex}" stroke="${eStroke}" stroke-width="0.5" />
+            <circle cx="166" cy="118" r="3" fill="black" />
+            <circle cx="163" cy="115" r="2" fill="white" /> 
+            
+            <path d="M 144,136 Q 150,143 156,136" stroke="#475569" stroke-width="2" fill="none" stroke-linecap="round"/>
+        `;
+
+        // 5. 안경 레이어
+        const glassesLayer = document.getElementById('layer-glasses');
+        if (glasses === 'none') {
+            glassesLayer.innerHTML = '';
+        } else {
+            const gHex = colorMap[glasses];
+            glassesLayer.innerHTML = `
+                <circle cx="134" cy="118" r="15" fill="none" stroke="${gHex}" stroke-width="2.5" />
+                <circle cx="166" cy="118" r="15" fill="none" stroke="${gHex}" stroke-width="2.5" />
+                <line x1="149" y1="118" x2="151" y2="118" stroke="${gHex}" stroke-width="2.5" />
+                <line x1="119" y1="118" x2="114" y2="115" stroke="${gHex}" stroke-width="2" />
+                <line x1="181" y1="118" x2="186" y2="115" stroke="${gHex}" stroke-width="2" />
+            `;
+        }
+    }
+
+    function randomizeAvatar() {
+        const selects = document.querySelectorAll('select');
+        selects.forEach(select => {
+            const randomIdx = Math.floor(Math.random() * select.options.length);
+            select.selectedIndex = randomIdx;
+        });
+        updateAvatar();
+    }
+
+    window.onload = updateAvatar;
+</script>
+</body>
+</html>
