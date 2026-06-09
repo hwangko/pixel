@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>교과서 외형 맞추기 시뮬레이터 v16 (헤어 도트 명확화)</title>
+    <style>
+        html, body { height: 100%; margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #0f172a; overflow: hidden; }
+        .container { display: flex; width: 100vw; height: 100vh; box-sizing: border-box; padding: 20px; gap: 20px; }
+        
+        /* 캐릭터 영역 */
+        .avatar-container { flex: 1.1; display: flex; flex-direction: column; background: #1e293b; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); padding: 20px; box-sizing: border-box; border: 3px solid #334155; }
+        .avatar-area { flex: 1; border: 4px solid #475569; background-color: #1e293b; border-radius: 15px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
+        svg { width: 100%; height: 100%; max-height: 100%; image-rendering: pixelated; }
+        .gender-indicator { text-align: center; margin-top: 15px; font-size: 18px; font-weight: bold; color: #38bdf8; background: #0f172a; padding: 10px; border-radius: 10px; border: 1px solid #334155; }
+
+        /* 오른쪽 컨트롤러 영역 */
+        .controls { flex: 1.3; display: flex; flex-direction: column; background: #1e293b; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); box-sizing: border-box; overflow-y: auto; height: 100%; gap: 12px; border: 3px solid #334155; color: white; }
+        h2 { margin: 0; color: #38bdf8; font-size: 22px; border-bottom: 2px solid #334155; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #1e293b; z-index: 10; }
+        
+        /* 버튼 디자인 */
+        button { font-weight: bold; cursor: pointer; transition: background 0.2s; border: none; }
+        .btn-purple { background-color: #6366f1; color: white; padding: 10px 16px; border-radius: 8px; font-size: 14px; }
+        .btn-purple:hover { background-color: #4f46e5; }
+        .btn-green { background-color: #10b981; color: white; padding: 12px 20px; border-radius: 10px; font-size: 16px; width: 100%; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }
+        .btn-green:hover { background-color: #059669; }
+        .btn-secondary { background-color: #64748b; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; }
+
+        .audio-box { background: #0f172a; border: 2px solid #334155; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
+        .script-box { background: #1e293b; border: 1px dashed #38bdf8; padding: 12px; border-radius: 6px; font-size: 14px; font-weight: bold; color: #38bdf8; display: none; line-height: 1.5; }
+
+        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .control-group { background: #0f172a; padding: 10px; border-radius: 8px; border-left: 4px solid #38bdf8; box-sizing: border-box; }
+        .control-group.full { grid-column: span 2; }
+        .control-group h3 { margin: 0 0 6px 0; font-size: 14px; color: #94a3b8; }
+        select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #334155; font-size: 13px; background-color: #1e293b; color: white; box-sizing: border-box; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 왼쪽 픽셀 도트 아바타 프리뷰 -->
+    <div class="avatar-container">
+        <div class="avatar-area">
+            <svg id="avatar-svg" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet">
+                <rect id="bg-rect" x="0" y="0" width="300" height="400" fill="#1e293b" />
+                <g id="layer-body"></g>
+                <g id="layer-clothes"></g> 
+                <g id="layer-hair"></g>    
+                <g id="layer-eyes"></g>    
+                <g id="layer-glasses"></g> 
+            </svg>
+        </div>
+        <div id="gender-text" class="gender-indicator">Gender: Male</div>
+    </div>
+
+    <!-- 오른쪽 컨트롤 대시보드 -->
+    <div class="controls">
+        <h2>
+            <span>👾 8-Bit 도트 아바타 메이커 v16</span>
+            <button class="btn-purple" style="font-size:12px; padding:5px 10px;" onclick="randomizeAvatar()">🎲 Random</button>
+        </h2>
+
+        <div class="audio-box">
+            <button class="btn-purple" onclick="speakFullCombination()">🔊 영어 원어민 발음 듣기 (TTS)</button>
+            <button class="btn-green" onclick="openFindCriminalGameWindow()">🖥️ 4인용 '범인 찾기(몽타주 조사)' 창 열기</button>
+            
+            <div style="text-align: right;">
+                <button class="btn-secondary" id="toggle-script-btn" onclick="toggleScript()">📝 정답 대본 보기</button>
+            </div>
+            <div id="script-content" class="script-box">
+                <div id="script-and"></div>
+            </div>
+        </div>
+        
+        <!-- 하단 도트 설정 단추 그리드 -->
+        <div class="control-grid">
+            <div class="control-group">
+                <h3>1. Gender (성별)</h3>
+                <select id="gender" onchange="updateAvatar()"><option value="male">Male</option><option value="female">Female</option></select>
+            </div>
+            <div class="control-group">
+                <h3>2. Eye Color (눈 색)</h3>
+                <select id="eyes" onchange="updateAvatar()">
+                    <option value="blue">Blue</option><option value="brown">Brown</option><option value="green">Green</option><option value="black">Black</option><option value="red">Red</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <h3>3. Hair Style (머리 모양)</h3>
+                <select id="hairStyle" onchange="updateAvatar()"><option value="short">Short</option><option value="long">Long</option><option value="curly">Curly</option></select>
+            </div>
+            <div class="control-group">
+                <h3>4. Hair Color (머리 색)</h3>
+                <select id="hairColor" onchange="updateAvatar()">
+                    <option value="brown">Brown</option><option value="black">Black</option><option value="gray">Gray</option><option value="yellow">Yellow</option><option value="red">Red</option>
+                </select>
+            </div>
+            <div class="control-group full">
+                <h3>5. Clothes Style (의상)</h3>
+                <select id="clothesStyle" onchange="updateAvatar()"><option value="shirt_pants">Shirt & Pants</option><option value="dress">Dress</option><option value="shirt_shorts">Shirt & Shorts</option></select>
+            </div>
+            <div class="control-group">
+                <h3>6. Top Color (상의 색)</h3>
+                <select id="shirtColor" onchange="updateAvatar()"><option value="white">White</option><option value="red">Red</option><option value="blue">Blue</option><option value="green">Green</option><option value="yellow">Yellow</option></select>
+            </div>
+            <div class="control-group">
+                <h3>7. Pants Color (하의 색)</h3>
+                <select id="pantsColor" onchange="updateAvatar()"><option value="blue">Blue</option><option value="white">White</option><option value="red">Red</option><option value="black">Black</option></select>
+            </div>
+            <div class="control-group full">
+                <h3>8. Glasses (안경)</h3>
+                <select id="glasses" onchange="updateAvatar()"><option value="none">None</option><option value="black">Black</option><option value="red">Red</option></select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const colorMap = { red: '#ef4444', blue: '#3b82f6', green: '#22c55e', yellow: '#eab308', black: '#1e293b', white: '#ffffff', brown: '#78350f', gray: '#94a3b8' };
+    const bgContrastMap = { white: '#0f172a', red: '#1e1b4b', blue: '#1c1917', green: '#2e1065', yellow: '#030712' };
+    let currentAnswerTarget = {};
+    let gameWindow = null;
+
+    function updateAvatar() {
+        const gender = document.getElementById('gender').value;
+        const eyes = document.getElementById('eyes').value;
+        const hairStyle = document.getElementById('hairStyle').value;
+        const hairColor = document.getElementById('hairColor').value;
+        const clothesStyle = document.getElementById('clothesStyle').value;
+        const shirtColor = document.getElementById('shirtColor').value;
+        const pantsColor = document.getElementById('pantsColor').value;
+        const glasses = document.getElementById('glasses').value;
+
+        currentAnswerTarget = { gender, eyes, hairStyle, hairColor, clothesStyle, shirtColor, pantsColor, glasses };
+        document.getElementById('bg-rect').setAttribute('fill', bgContrastMap[shirtColor] || '#0f172a');
+        document.getElementById('gender-text').innerText = `Gender: ${gender.charAt(0).toUpperCase() + gender.slice(1)}`;
+
+        document.getElementById('layer-body').innerHTML = generateBodyHTML(gender);
+        document.getElementById('layer-clothes').innerHTML = generateClothesHTML(clothesStyle, shirtColor, pantsColor, gender);
+        document.getElementById('layer-hair').innerHTML = generateHairHTML(hairStyle, hairColor);
+        document.getElementById('layer-eyes').innerHTML = generateEyesHTML(eyes);
+        document.getElementById('layer-glasses').innerHTML = generateGlassesHTML(glasses);
+
+        let p = (gender==='male') ? 'He':'She';
+        let cText = (clothesStyle==='shirt_pants')? `a ${shirtColor} shirt and ${pantsColor} pants` : (clothesStyle==='dress')?`a ${shirtColor} dress` : `a ${shirtColor} shirt and ${pantsColor} shorts`;
+        let gText = (glasses!=='none')? ` and ${glasses} glasses` : "";
+        document.getElementById('script-and').innerText = `🔗 ${p} has ${eyes} eyes and ${hairStyle} ${hairColor} hair. ${p} is wearing ${cText}${gText}.`;
+
+        if (gameWindow && !gameWindow.closed) gameWindow.syncTargetData(currentAnswerTarget);
+    }
+
+    function generateBodyHTML(g) { 
+        const sk = (g === 'male') ? '#e2cfa7' : '#ffe4c4'; 
+        return `<rect x="110" y="70" width="80" height="80" fill="${sk}" /><rect x="140" y="150" width="20" height="20" fill="${sk}" />`; 
+    }
+    
+    function generateClothesHTML(s, sc, pc, g) {
+        const sh = colorMap[sc], ph = colorMap[pc];
+        const sk = (g === 'male') ? '#e2cfa7' : '#ffe4c4';
+        if (s === 'dress') {
+            return `
+                <rect x="90" y="170" width="120" height="50" fill="${sh}" /><rect x="80" y="220" width="140" height="70" fill="${sh}" />
+                <rect x="110" y="290" width="25" height="40" fill="${sk}" /><rect x="165" y="290" width="25" height="40" fill="${sk}" />
+                <rect x="105" y="330" width="35" height="15" fill="#334155" /><rect x="160" y="330" width="35" height="15" fill="#334155" />
+            `;
+        }
+        if (s === 'shirt_shorts') {
+            return `
+                <rect x="90" y="170" width="120" height="80" fill="${sh}" /><rect x="90" y="250" width="50" height="40" fill="${ph}" /><rect x="160" y="250" width="50" height="40" fill="${ph}" />
+                <rect x="100" y="290" width="30" height="40" fill="${sk}" /><rect x="170" y="290" width="30" height="40" fill="${sk}" />
+                <rect x="95" y="330" width="40" height="15" fill="#334155" /><rect x="165" y="330" width="40" height="15" fill="#334155" />
+            `;
+        }
+        return `
+            <rect x="90" y="170" width="120" height="80" fill="${sh}" /><rect x="90" y="250" width="55" height="80" fill="${ph}" /><rect x="155" y="250" width="55" height="80" fill="${ph}" />
+            <rect x="90" y="330" width="55" height="15" fill="#334155" /><rect x="155" y="330" width="55" height="15" fill="#334155" />
+        `;
+    }
+
+    // 🛠️ [핵심 수정] Short 헤어와 Curly 헤어의 픽셀 실루엣 극대화 분리
+    function generateHairHTML(s, c) { 
+        const h = colorMap[c]; 
+        
+        if (s === 'short') {
+            // [Short] 두상에 딱 붙고 깔끔하게 정돈된 스포티 숏컷
+            return `
+                <rect x="115" y="58" width="70" height="12" fill="${h}" /> <!-- 슬림한 윗머리 -->
+                <rect x="110" y="70" width="8" height="20" fill="${h}" />  <!-- 얇은 구전나루 L -->
+                <rect x="182" y="70" width="8" height="20" fill="${h}" />  <!-- 얇은 구전나루 R -->
+                <rect x="118" y="70" width="64" height="6" fill="${h}" />   <!-- 가볍게 일자로 깎은 앞머리 -->
+            `;
+        } 
+        if (s === 'long') {
+            // [Long] 어깨까지 일자로 길게 내려오는 생머리
+            return `
+                <rect x="110" y="55" width="80" height="15" fill="${h}" />
+                <rect x="100" y="70" width="15" height="120" fill="${h}" />
+                <rect x="185" y="70" width="15" height="120" fill="${h}" />
+                <rect x="115" y="70" width="70" height="10" fill="${h}" />
+            `;
+        }
+        // 🥦 [Curly] 사방으로 올록볼록 폭발하는 빅볼륨 펌/아프로 스타일
+        return `
+            <rect x="95" y="38" width="110" height="45" fill="${h}" />  <!-- 거대해진 기본 헤어캡 볼륨 -->
+            <rect x="90" y="55" width="15" height="55" fill="${h}" />   <!-- 왼쪽 볼륨 오버플로우 -->
+            <rect x="195" y="55" width="15" height="55" fill="${h}" />  <!-- 오른쪽 볼륨 오버플로우 -->
+            <!-- 뽀글뽀글한 질감을 내기 위한 외곽 픽셀 요철 배치 -->
+            <rect x="110" y="28" width="80" height="10" fill="${h}" />   <!-- 상단 솟아오른 펌 -->
+            <rect x="80" y="65" width="15" height="30" fill="${h}" />   <!-- 좌측 최외곽 펌 볼 -->
+            <rect x="205" y="65" width="15" height="30" fill="${h}" />  <!-- 우측 최외곽 펌 볼 -->
+            <!-- 이마라인도 불규칙한 도트 3블록으로 뽀글거리게 표현 -->
+            <rect x="115" y="70" width="15" height="15" fill="${h}" />
+            <rect x="143" y="70" width="14" height="15" fill="${h}" />
+            <rect x="170" y="70" width="15" height="15" fill="${h}" />
+        `;
+    }
+
+    function generateEyesHTML(c) { 
+        const ec = colorMap[c];
+        return `
+            <rect x="120" y="95" width="20" height="15" fill="white" />
+            <rect x="130" y="95" width="10" height="15" fill="${ec}" />
+            <rect x="135" y="100" width="5" height="10" fill="black" />
+            <rect x="160" y="95" width="20" height="15" fill="white" />
+            <rect x="160" y="95" width="10" height="15" fill="${ec}" />
+            <rect x="160" y="100" width="5" height="10" fill="black" />
+            <rect x="140" y="130" width="20" height="5" fill="#475569" />
+        `; 
+    }
+
+    function generateGlassesHTML(c) { 
+        if(c==='none') return ''; 
+        const gh = colorMap[c];
+        return `
+            <rect x="115" y="90" width="30" height="25" fill="none" stroke="${gh}" stroke-width="4" />
+            <rect x="155" y="90" width="30" height="25" fill="none" stroke="${gh}" stroke-width="4" />
+            <rect x="145" y="100" width="10" height="4" fill="${gh}" />
+            <rect x="105" y="100" width="10" height="4" fill="${gh}" />
+            <rect x="185" y="100" width="10" height="4" fill="${gh}" />
+        `; 
+    }
+
+    function randomizeAvatar() {
+        document.querySelectorAll('select').forEach(s => s.selectedIndex = Math.floor(Math.random() * s.options.length));
+        updateAvatar();
+    }
+    
+    function toggleScript() { const b = document.getElementById('script-content'); b.style.display = (b.style.display==='none'||b.style.display==='')?'block':'none'; }
+    
+    function speakFullCombination() { 
+        if('speechSynthesis' in window) { 
+            window.speechSynthesis.cancel(); 
+            const text = document.getElementById('script-and').innerText.replace('🔗 ', '');
+            const u = new SpeechSynthesisUtterance(text); 
+            u.lang='en-US'; u.rate = 0.8;
+            window.speechSynthesis.speak(u); 
+        } 
+    }
+
+    // 🖥️ 4인용 몽타주 조사 창 제어
+    function openFindCriminalGameWindow() {
+        if (gameWindow && !gameWindow.closed) { gameWindow.focus(); gameWindow.syncTargetData(currentAnswerTarget); return; }
+        gameWindow = window.open("", "CriminalGameStage", "width=1200,height=800,resizable=yes");
+        gameWindow.colorMap = colorMap; gameWindow.bgContrastMap = bgContrastMap;
+        gameWindow.generateBodyHTML = generateBodyHTML; gameWindow.generateClothesHTML = generateClothesHTML;
+        gameWindow.generateHairHTML = generateHairHTML; gameWindow.generateEyesHTML = generateEyesHTML; gameWindow.generateGlassesHTML = generateGlassesHTML;
+
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><title>🕵️‍♂️ 8-Bit 범인 찾기 Stage</title>
+        <style>
+            body { background:#0f172a; color:white; padding:15px; display:flex; flex-direction:column; height:100vh; margin:0; box-sizing:border-box; overflow:hidden; font-family:sans-serif;}
+            .grid { flex:1; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); gap:12px; height:calc(100vh - 70px); }
+            .card { background:#1e293b; border:3px solid #475569; border-radius:15px; display:flex; flex-direction:column; align-items:center; padding:8px; box-sizing:border-box; cursor:pointer; transition:all 0.2s;}
+            .card:hover { border-color:#38bdf8; transform:scale(1.02); }
+            .wrap { width:100%; flex:1; display:flex; justify-content:center; align-items:center; min-height:0; }
+            svg { max-width:100%; max-height:100%; image-rendering:pixelated; }
+            .num { background:#38bdf8; color:#0f172a; padding:3px 12px; border-radius:10px; font-weight:bold; margin-top:5px; font-size:14px;}
+        </style>
+        </head>
+        <body>
+            <h2 style="margin:0 0 10px 0; color:#38bdf8;">🕵️‍♂️ 2vs2 Cross-Examination (진짜 범인 도트를 찾아라!)</h2>
+            <div id="g" class="grid"></div>
+            <script>
+                let td = {};
+                const opts = {
+                    gender:['male','female'], eyes:['blue','brown','green','black','red'],
+                    hairStyle:['short','long','curly'], hairColor:['brown','black','gray','yellow','red'],
+                    clothesStyle:['shirt_pants','dress','shirt_shorts'], shirtColor:['white','red','blue','green','yellow'],
+                    pantsColor:['blue','white','red','black'], glasses:['none','black','red']
+                };
+                window.syncTargetData = function(d) { td = d; make(); };
+                function r(a) { return a[Math.floor(Math.random()*a.length)]; }
+                function make() {
+                    const grid = document.getElementById('g'); grid.innerHTML = '';
+                    let list = [{...td, isT:true}];
+                    while(list.length < 8) {
+                        list.push({
+                            gender: r(opts.gender), eyes: r(opts.eyes), hairStyle: r(opts.hairStyle), hairColor: r(opts.hairColor),
+                            clothesStyle: r(opts.clothesStyle), shirtColor: r(opts.shirtColor), pantsColor: r(opts.pantsColor), glasses: r(opts.glasses), isT:false
+                        });
+                    }
+                    list.sort(() => Math.random() - 0.5);
+                    list.forEach((s, i) => {
+                        const c = document.createElement('div'); c.className='card'; c.id='c-'+i;
+                        const bg = window.bgContrastMap[s.shirtColor] || '#1e293b';
+                        c.innerHTML = \`<div class="wrap"><svg viewBox="0 0 300 400"><rect width="300" height="400" fill="\${bg}" rx="10"/>\${window.generateBodyHTML(s.gender)}\${window.generateClothesHTML(s.clothesStyle,s.shirtColor,s.pantsColor,s.gender)}\${window.generateHairHTML(s.hairStyle,s.hairColor)}\${window.generateEyesHTML(s.eyes)}\${window.generateGlassesHTML(s.glasses)}</svg></div><div class="num">No. \${i+1}</div>\`;
+                        c.onclick = () => {
+                            if(s.isT) { alert("🎉 정답입니다! 범인을 검거했습니다!"); document.getElementById('c-'+i).style.background='#064e3b'; }
+                            else { alert("❌ 틀렸습니다! 용의선상에서 제외됩니다."); document.getElementById('c-'+i).style.opacity='0.1'; }
+                        };
+                        grid.appendChild(c);
+                    });
+                }
+            <\/script>
+        </body>
+        </html>`;
+        gameWindow.document.open(); gameWindow.document.write(htmlContent); gameWindow.document.close();
+        setTimeout(()=>gameWindow.syncTargetData(currentAnswerTarget), 200);
+    }
+
+    window.onload = updateAvatar;
+</script>
+</body>
+</html>
