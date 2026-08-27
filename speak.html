@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lesson 7. Stage Game - Challenge Mode</title>
+  <title>Lesson 7. Stage Game - Retry Mode</title>
   <style>
     :root {
       --bg-color: #e0f7fa;
@@ -110,7 +110,7 @@
         <div id="hint-content">준비가 되면 마이크 버튼을 눌러보세요!</div>
       </div>
       <button class="mic-btn" id="mic-btn" onclick="toggleListening()">🎤</button>
-      <div class="status-text" id="status">마이크를 누르고 말해보세요! (틀리면 Stage 1로 리셋됩니다)</div>
+      <div class="status-text" id="status">마이크를 누르고 말해보세요!</div>
     </div>
   </main>
 
@@ -149,6 +149,7 @@
     let currentStepIdx = 0;
     let recognition;
     let isListening = false;
+    let isFailedState = false; // 오답 시 따라 말하기 모드 플래그
 
     function getRandom(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
@@ -160,8 +161,8 @@
       return `${getRandom(db.months)} ${day}`;
     }
 
-    // 시나리오 생성기
     function generateScenario() {
+      isFailedState = false;
       const flowType = Math.floor(Math.random() * 3);
       const event1 = getRandom(db.events);
       const event2 = getRandom(db.events);
@@ -174,7 +175,6 @@
       activeDialogueSteps = [];
 
       if (flowType === 0) {
-        // 초대하기 -> 날짜 말하기 -> 약속 장소 지시 받아서 알겠다고 하기
         activeDialogueSteps = [
           {
             initialSystemEn: `I love ${event1.en}!`,
@@ -205,7 +205,6 @@
           }
         ];
       } else if (flowType === 1) {
-        // 친구가 초대 -> 거절 -> 다른 초대 -> 기쁘게 수락
         activeDialogueSteps = [
           {
             initialSystemEn: `Can you come to the ${event1.en}? It's on ${date1}.`,
@@ -237,7 +236,6 @@
           }
         ];
       } else {
-        // 친구 초대 -> 기쁘게 수락 -> 확인
         activeDialogueSteps = [
           {
             initialSystemEn: `Can you come to my ${event1.en}? It's ${date1}.`,
@@ -390,12 +388,30 @@
 
     function handleUserSpeech(speech) {
       const current = activeDialogueSteps[currentStepIdx];
-      
       addMessage('user', speech, '내가 한 말');
 
       const cleanSpeech = speech.toLowerCase().replace(/[^a-z0-9 ]/g, '');
       const isCorrect = current.target.some(target => cleanSpeech.includes(target.toLowerCase()));
 
+      // 오답 따라 말하기 모드 상태인 경우
+      if (isFailedState) {
+        if (isCorrect) {
+          document.getElementById('status').innerText = '👍 정답을 잘 따라 하셨습니다! Stage 1부터 다시 시작합니다.';
+          stage = 1;
+          document.getElementById('stage-badge').innerText = `🏆 STAGE 1`;
+          speak("Good job! Starting again from stage 1.");
+          
+          setTimeout(() => {
+            generateScenario();
+          }, 2000);
+        } else {
+          document.getElementById('status').innerText = '❌ 아직 정답 문장과 다릅니다. 화면에 보이는 정답을 그대로 읽어보세요!';
+          speak(current.hintEn);
+        }
+        return;
+      }
+
+      // 일반 대화 진행 중인 경우
       if (isCorrect) {
         currentStepIdx++;
         updateProgress();
@@ -422,19 +438,22 @@
         }, 1000);
 
       } else {
-        // 틀렸을 경우: STAGE 1 리셋!
-        document.getElementById('status').innerText = '❌ 틀렸습니다! STAGE 1로 처음부터 다시 도전해보세요!';
-        stage = 1;
-        document.getElementById('stage-badge').innerText = `🏆 STAGE 1`;
+        // 오답 발생 시 -> 따라 말하기 안내 모드로 전환
+        isFailedState = true;
+        document.getElementById('status').innerText = '❌ 틀렸습니다! 정답을 똑같이 따라 말해야 Stage 1부터 재시작됩니다.';
         
         document.getElementById('hint').innerHTML = `
-          <div class="hint-title" style="color:#d32f2f;">💥 틀렸습니다! STAGE 1로 돌아갑니다.</div>
-          <div>올바른 표현을 확인하고 다시 도전해보세요!</div>
+          <div class="hint-title" style="color:#d32f2f;">💥 틀렸습니다! 아래 정답을 따라 말해보세요.</div>
+          <div style="font-size: 1.15rem; font-weight: bold; margin: 8px 0; color: #1565c0; background: #e3f2fd; padding: 8px; border-radius: 8px;">
+            🗣️ "${current.hintEn}"
+          </div>
+          <div style="color: #555; font-size: 0.9rem;">(${current.hintKr})</div>
+          <div style="margin-top: 8px; font-size: 0.85rem; color: #d81b60; font-weight: bold;">
+            👇 마이크를 누르고 위 문장을 정확히 똑같이 읽어주세요!
+          </div>
         `;
 
-        setTimeout(() => {
-          generateScenario();
-        }, 3000);
+        speak(`The correct answer is: ${current.hintEn}`);
       }
     }
   </script>
