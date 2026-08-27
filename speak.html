@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 7. Can You Come to the Movie Festival?</title>
+  <style>
+    :root {
+      --bg-color: #e0f7fa;
+      --card-bg: #ffffff;
+      --primary-color: #00838f;
+      --accent-color: #ff7043;
+      --system-bubble: #e1f5fe;
+      --user-bubble: #fff3e0;
+      --text-color: #37474f;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'MaruBuri', 'Arial', sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+    
+    header { text-align: center; margin-bottom: 20px; width: 100%; max-width: 800px; }
+    h1 { color: var(--primary-color); font-size: 1.8rem; margin-bottom: 15px; }
+    
+    .controls { background: var(--card-bg); padding: 12px 20px; border-radius: 30px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .speed-control { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: bold; }
+    .btn { border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .btn-reset { background-color: #eceff1; color: #455a64; }
+    .btn-reset:hover { background-color: #cfd8dc; }
+
+    .scenario-select { display: flex; gap: 8px; overflow-x: auto; width: 100%; max-width: 800px; margin-bottom: 20px; padding: 5px 0; }
+    .scenario-btn { background: var(--card-bg); border: 2px solid var(--primary-color); color: var(--primary-color); padding: 8px 14px; border-radius: 15px; cursor: pointer; white-space: nowrap; font-size: 0.9rem; }
+    .scenario-btn.active { background: var(--primary-color); color: #fff; }
+
+    main { width: 100%; max-width: 800px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.08); padding: 20px; display: flex; flex-direction: column; height: 500px; }
+    
+    .chat-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 10px; }
+    .message { display: flex; flex-direction: column; max-width: 75%; animation: fadeIn 0.3s ease; }
+    .message.system { align-self: flex-start; }
+    .message.user { align-self: flex-end; }
+    
+    .bubble { padding: 12px 16px; border-radius: 18px; font-size: 1rem; line-height: 1.4; position: relative; }
+    .system .bubble { background: var(--system-bubble); border-bottom-left-radius: 4px; color: #0277bd; }
+    .user .bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; color: #e65100; }
+    .sub-text { font-size: 0.75rem; color: #78909c; margin-top: 4px; }
+
+    .action-panel { border-top: 1px solid #eceff1; padding-top: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .hint-box { background: #fffde7; border: 1px dashed #fbc02d; padding: 10px 15px; border-radius: 10px; font-size: 0.9rem; text-align: center; width: 100%; }
+    
+    .mic-btn { width: 60px; height: 60px; border-radius: 50%; border: none; background: var(--accent-color); color: white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,112,67,0.4); transition: transform 0.2s; }
+    .mic-btn.listening { animation: pulse 1.2s infinite; background: #e53935; }
+    .status-text { font-size: 0.85rem; color: #78909c; }
+
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🎬 Lesson 7. 대화형 Role-Play 🍿</h1>
+    <div class="controls">
+      <div class="speed-control">
+        <label for="speed">🔊 말하기 속도:</label>
+        <input type="range" id="speed" min="0.6" max="1.1" step="0.1" value="0.9">
+        <span id="speed-val">0.9</span>
+      </div>
+      <button class="btn btn-reset" onclick="resetChat()">🔄 다시 시작</button>
+    </div>
+  </header>
+
+  <div class="scenario-select" id="scenario-list"></div>
+
+  <main>
+    <div class="chat-container" id="chat"></div>
+    
+    <div class="action-panel">
+      <div class="hint-box" id="hint">상황을 선택하고 말하기 버튼을 눌러보세요!</div>
+      <button class="mic-btn" id="mic-btn" onclick="toggleListening()">🎤</button>
+      <div class="status-text" id="status">마이크 버튼을 누르면 인식이 시작됩니다.</div>
+    </div>
+  </main>
+
+  <script>
+    // 7단원 교과서 데이터
+    const scenarios = [
+      {
+        title: "영화 축제 초대",
+        steps: [
+          { system: "Can you come to the movie festival? It's on August 27th.", systemKr: "너는 영화 축제에 올 수 있니? 8월 27일이야.", target: ["of course", "sure", "i can"], next: 1 },
+          { system: "Great! Come to the river park at 6.", systemKr: "좋아! 6시에 강가 공원으로 와.", target: ["okay i will", "okay", "i will"], next: "end" }
+        ]
+      },
+      {
+        title: "책 축제 초대",
+        steps: [
+          { system: "Can you come to the book festival? It's on August 12th.", systemKr: "너는 책 축제에 올 수 있니? 8월 12일이야.", target: ["of course", "sure"], next: 1 },
+          { system: "Come to the school library at 2.", systemKr: "2시에 학교 도서관으로 와.", target: ["okay i will", "okay"], next: "end" }
+        ]
+      },
+      {
+        title: "요리 교실 초대 (수락)",
+        steps: [
+          { system: "Can you come to the cooking class party? It's this Saturday.", systemKr: "너는 요리 교실 잔치에 올 수 있니? 이번 주 토요일이야.", target: ["of course", "sure"], next: 1 },
+          { system: "We'll bake chocolate biscuits. Come to the school kitchen at 11.", systemKr: "우리는 초콜릿 비스킷을 구울 거야. 11시에 학교 조리실로 와.", target: ["okay i will", "great"], next: "end" }
+        ]
+      },
+      {
+        title: "야구 경기 거절",
+        steps: [
+          { system: "Can you come to the laser show? It's on October 4th.", systemKr: "너는 레이저 공연에 올 수 있니? 10월 4일이야.", target: ["sorry but i can't i have a baseball game", "sorry i can't", "sorry"], next: "decline_end" }
+        ]
+      }
+    ];
+
+    let currentScenarioIdx = 0;
+    let currentStepIdx = 0;
+    let recognition;
+    let isListening = false;
+
+    // 초기화
+    window.onload = () => {
+      initScenarioButtons();
+      initSTT();
+      loadScenario(0);
+
+      document.getElementById('speed').addEventListener('input', (e) => {
+        document.getElementById('speed-val').innerText = e.target.value;
+      });
+    };
+
+    function initScenarioButtons() {
+      const container = document.getElementById('scenario-list');
+      scenarios.forEach((s, i) => {
+        const btn = document.createElement('button');
+        btn.className = `scenario-btn ${i === 0 ? 'active' : ''}`;
+        btn.innerText = s.title;
+        btn.onclick = () => {
+          document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          loadScenario(i);
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function loadScenario(idx) {
+      currentScenarioIdx = idx;
+      resetChat();
+    }
+
+    function resetChat() {
+      document.getElementById('chat').innerHTML = '';
+      currentStepIdx = 0;
+      processStep();
+    }
+
+    function processStep() {
+      const step = scenarios[currentScenarioIdx].steps[currentStepIdx];
+      addMessage('system', step.system, step.systemKr);
+      speak(step.system);
+
+      // 힌트 제공
+      const hintText = step.target[0];
+      document.getElementById('hint').innerHTML = `💡 **따라 말해보기:** "${hintText}"`;
+    }
+
+    function addMessage(sender, text, subText) {
+      const chat = document.getElementById('chat');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${sender}`;
+      msgDiv.innerHTML = `
+        <div class="bubble">${text}</div>
+        <div class="sub-text">${subText || ''}</div>
+      `;
+      chat.appendChild(msgDiv);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    // TTS 기능
+    function speak(text) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = parseFloat(document.getElementById('speed').value);
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // STT 기능 (음성 인식)
+    function initSTT() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 브라우저를 사용해 주세요.');
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        document.getElementById('mic-btn').classList.add('listening');
+        document.getElementById('status').innerText = '듣고 있어요... 말씀해 주세요!';
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        document.getElementById('mic-btn').classList.remove('listening');
+        document.getElementById('status').innerText = '마이크 버튼을 누르면 인식이 시작됩니다.';
+      };
+
+      recognition.onresult = (event) => {
+        const userSpeech = event.results[0][0].transcript;
+        handleUserSpeech(userSpeech);
+      };
+    }
+
+    function toggleListening() {
+      if (isListening) {
+        recognition.stop();
+      } else {
+        recognition.start();
+      }
+    }
+
+    function handleUserSpeech(speech) {
+      addMessage('user', speech, '내가 한 말');
+      const currentStep = scenarios[currentScenarioIdx].steps[currentStepIdx];
+      
+      // 구두점 제거 및 소문자 변환 후 비교
+      const cleanSpeech = speech.toLowerCase().replace(/[^a-z0-9 ]/g, '');
+      const isCorrect = currentStep.target.some(target => cleanSpeech.includes(target.toLowerCase()));
+
+      if (isCorrect) {
+        if (currentStep.next === 'end') {
+          setTimeout(() => {
+            addMessage('system', 'Great job! Conversation finished.', '잘했어요! 대화가 완료되었습니다.');
+            speak('Great job!');
+            document.getElementById('hint').innerHTML = '🎉 **대화 완료! 다른 상황을 선택해보세요.**';
+          }, 1000);
+        } else if (currentStep.next === 'decline_end') {
+          setTimeout(() => {
+            addMessage('system', "That's okay. Good luck!", '괜찮아. 행운을 빌게!');
+            speak("That's okay. Good luck!");
+            document.getElementById('hint').innerHTML = '🎉 **대화 완료! 다른 상황을 선택해보세요.**';
+          }, 1000);
+        } else {
+          currentStepIdx = currentStep.next;
+          setTimeout(processStep, 1500);
+        }
+      } else {
+        document.getElementById('status').innerText = '다시 한 번 정해진 문장으로 말씀해 보세요!';
+      }
+    }
+  </script>
+</body>
+</html>
