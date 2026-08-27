@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lesson 7. Dynamic Random Conversation Game</title>
+  <title>Lesson 7. Stage Game - Challenge Mode</title>
   <style>
     :root {
       --bg-color: #e0f7fa;
@@ -13,24 +13,28 @@
       --system-bubble: #e1f5fe;
       --user-bubble: #fff3e0;
       --text-color: #37474f;
+      --stage-color: #ffb300;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'MaruBuri', 'Arial', sans-serif; }
     body { background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
     
-    header { text-align: center; margin-bottom: 15px; width: 100%; max-width: 800px; }
-    h1 { color: var(--primary-color); font-size: 1.8rem; margin-bottom: 10px; }
+    header { text-align: center; margin-bottom: 12px; width: 100%; max-width: 800px; }
+    h1 { color: var(--primary-color); font-size: 1.8rem; margin-bottom: 8px; }
     
-    .controls { background: var(--card-bg); padding: 12px 20px; border-radius: 30px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); flex-wrap: wrap; }
+    .status-bar { display: flex; gap: 15px; justify-content: center; align-items: center; margin-bottom: 10px; }
+    .stage-badge { background: var(--stage-color); color: #fff; font-size: 1.2rem; font-weight: bold; padding: 6px 18px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+    .controls { background: var(--card-bg); padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .speed-control { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: bold; }
-    .btn { border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 0.9rem; }
-    .btn-random { background-color: var(--primary-color); color: #fff; }
-    .btn-random:hover { background-color: #006064; }
+    .btn { border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 0.85rem; }
+    .btn-reset { background-color: #eceff1; color: #455a64; }
+    .btn-reset:hover { background-color: #cfd8dc; }
 
     .progress-bar-container { width: 100%; max-width: 800px; background: #b2ebf2; height: 8px; border-radius: 4px; margin-bottom: 15px; overflow: hidden; }
     .progress-bar { width: 0%; height: 100%; background: var(--primary-color); transition: width 0.3s ease; }
 
-    main { width: 100%; max-width: 800px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.08); padding: 20px; display: flex; flex-direction: column; height: 540px; }
+    main { width: 100%; max-width: 800px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.08); padding: 20px; display: flex; flex-direction: column; height: 530px; }
     
     .chat-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 10px; }
     .message { display: flex; flex-direction: column; max-width: 85%; animation: fadeIn 0.3s ease; }
@@ -62,12 +66,13 @@
     }
     .blur-hint { font-size: 0.7rem; color: #90a4ae; margin-left: 5px; font-weight: normal; }
 
-    .action-panel { border-top: 1px solid #eceff1; padding-top: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .action-panel { border-top: 1px solid #eceff1; padding-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     
-    .hint-box { background: #fffde7; border: 1px dashed #fbc02d; padding: 12px 18px; border-radius: 12px; font-size: 0.95rem; text-align: center; width: 100%; }
-    .hint-title { font-weight: bold; color: #f57f17; margin-bottom: 4px; font-size: 0.85rem; }
+    .hint-box { background: #fffde7; border: 1.5px dashed #fbc02d; padding: 12px 18px; border-radius: 12px; font-size: 0.95rem; text-align: center; width: 100%; }
+    .hint-title { font-weight: bold; color: #d81b60; margin-bottom: 6px; font-size: 0.9rem; }
+    .badge-tag { display: inline-block; background: #e1f5fe; color: #0288d1; font-weight: bold; padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; margin-right: 4px; }
 
-    .mic-btn { width: 64px; height: 64px; border-radius: 50%; border: none; background: var(--accent-color); color: white; font-size: 1.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,112,67,0.4); transition: transform 0.2s; }
+    .mic-btn { width: 60px; height: 60px; border-radius: 50%; border: none; background: var(--accent-color); color: white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,112,67,0.4); transition: transform 0.2s; }
     .mic-btn.listening { animation: pulse 1.2s infinite; background: #e53935; }
     .status-text { font-size: 0.85rem; color: #78909c; font-weight: bold; }
 
@@ -78,14 +83,17 @@
 <body>
 
   <header>
-    <h1>🎲 Lesson 7. 랜덤 대화 생성기 🍿</h1>
+    <h1>🎮 Lesson 7. 무한 스테이지 챌린지 🍿</h1>
+    <div class="status-bar">
+      <div class="stage-badge" id="stage-badge">🏆 STAGE 1</div>
+    </div>
     <div class="controls">
       <div class="speed-control">
-        <label for="speed">🔊 말하기 속도:</label>
+        <label for="speed">🔊 속도:</label>
         <input type="range" id="speed" min="0.6" max="1.1" step="0.1" value="0.9">
         <span id="speed-val">0.9</span>
       </div>
-      <button class="btn btn-random" onclick="generateNewScenario()">🔄 새로운 랜덤 대화 생성</button>
+      <button class="btn btn-reset" onclick="resetToStage1()">🔄 Stage 1부터 다시하기</button>
     </div>
   </header>
 
@@ -102,12 +110,11 @@
         <div id="hint-content">준비가 되면 마이크 버튼을 눌러보세요!</div>
       </div>
       <button class="mic-btn" id="mic-btn" onclick="toggleListening()">🎤</button>
-      <div class="status-text" id="status">마이크 버튼을 누르고 영어로 말해보세요! (글자는 클릭하면 노출됩니다)</div>
+      <div class="status-text" id="status">마이크를 누르고 말해보세요! (틀리면 Stage 1로 리셋됩니다)</div>
     </div>
   </main>
 
   <script>
-    // 6학년 수준 랜덤 데이터 데이터베이스 (교과서 + 확장 어휘)
     const db = {
       events: [
         { en: "movie festival", kr: "영화 축제" },
@@ -118,37 +125,31 @@
         { en: "cooking class party", kr: "요리 교실 잔치" },
         { en: "star night party", kr: "별밤 파티" },
         { en: "free drinks party", kr: "무료 음료 잔치" },
-        { en: "dance show", kr: "댄스 공연" },
-        { en: "sports day", kr: "운동회" },
-        { en: "game festival", kr: "게임 축제" },
         { en: "drone show", kr: "드론 쇼" }
       ],
       months: ["August", "September", "October", "November"],
-      days: ["1st", "5th", "10th", "12th", "15th", "20th", "24th", "27th", "30th", "this Saturday", "this Sunday", "tomorrow"],
+      days: ["1st", "5th", "10th", "12th", "15th", "20th", "24th", "27th", "30th", "this Saturday", "tomorrow"],
       places: [
         { en: "sports park", kr: "스포츠 공원" },
         { en: "river park", kr: "강가 공원" },
         { en: "school library", kr: "학교 도서관" },
         { en: "school kitchen", kr: "학교 조리실" },
-        { en: "my house", kr: "우리 집" },
-        { en: "city hall", kr: "시청" }
+        { en: "my house", kr: "우리 집" }
       ],
       times: ["at 10", "at 11", "at 2", "at 3", "at 5", "at 6"],
       reasons: [
         { en: "I have a baseball game.", kr: "나는 야구 경기가 있어.", key: "baseball game" },
         { en: "I have a basketball game.", kr: "나는 농구 경기가 있어.", key: "basketball game" },
-        { en: "I have a soccer game.", kr: "나는 축구 경기가 있어.", key: "soccer game" },
-        { en: "I visit my cousin every Saturday.", kr: "나는 토요일마다 사촌 집을 방문해.", key: "visit my cousin" },
-        { en: "I have a piano exam.", kr: "나는 피아노 시험이 있어.", key: "piano exam" }
+        { en: "I visit my cousin every Saturday.", kr: "나는 토요일마다 사촌 집을 방문해.", key: "visit my cousin" }
       ]
     };
 
+    let stage = 1;
     let activeDialogueSteps = [];
     let currentStepIdx = 0;
     let recognition;
     let isListening = false;
 
-    // 유틸리티 함수: 무작위 추출
     function getRandom(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
     }
@@ -159,9 +160,9 @@
       return `${getRandom(db.months)} ${day}`;
     }
 
-    // 대화 구조 무작위 생성 엔진
-    function generateNewScenario() {
-      const flowType = Math.floor(Math.random() * 3); // 3가지 패턴 중 무작위 선택
+    // 시나리오 생성기
+    function generateScenario() {
+      const flowType = Math.floor(Math.random() * 3);
       const event1 = getRandom(db.events);
       const event2 = getRandom(db.events);
       const date1 = getRandomDateStr();
@@ -173,12 +174,12 @@
       activeDialogueSteps = [];
 
       if (flowType === 0) {
-        // Pattern 0: 내가 친구를 먼저 초대 ➔ 날짜 안내 ➔ 약속 확정
+        // 초대하기 -> 날짜 말하기 -> 약속 장소 지시 받아서 알겠다고 하기
         activeDialogueSteps = [
           {
             initialSystemEn: `I love ${event1.en}!`,
             initialSystemKr: `나 ${event1.kr} 정말 좋아해!`,
-            instruction: `1. 친구에게 ${event1.kr}에 올 수 있는지 물어보세요!`,
+            instruction: `[초대 질문] 친구에게 ${event1.kr}에 올 수 있는지 물어보세요!`,
             hintEn: `Can you come to the ${event1.en}?`,
             hintKr: `너 ${event1.kr}에 올 수 있니?`,
             target: [`can you come to the ${event1.en}`, `come to the ${event1.en}`],
@@ -186,29 +187,30 @@
             systemReplyKr: `물론이지! ${event1.kr}가 언제니?`
           },
           {
-            instruction: `2. 날짜(${date1})를 알려주세요!`,
+            instruction: `[날짜 안내] 날짜(${date1})를 알려주세요!`,
             hintEn: `It's on ${date1}.`,
             hintKr: `${date1}이야.`,
             target: [`its on ${date1}`, date1.toLowerCase()],
-            systemReplyEn: `Great! Where should we meet?`,
-            systemReplyKr: `좋아! 어디서 만날까?`
+            systemReplyEn: `Great! Come to the ${place.en} ${time}.`,
+            systemReplyKr: `좋아! ${time}에 ${place.kr}(으)로 와.`
           },
           {
-            instruction: `3. 장소와 시간(${place.kr}, ${time})을 알려주세요!`,
-            hintEn: `Come to the ${place.en} ${time}.`,
-            hintKr: `${time}에 ${place.kr}(으)로 와.`,
-            target: [`come to the ${place.en}`, place.en.toLowerCase(), time.toLowerCase()],
-            systemReplyEn: `Okay, I will! See you then!`,
-            systemReplyKr: `알았어, 그럴게. 그때 보자!`
+            instruction: `[약속 동의] "~로 오라"는 친구 지시에 "알았어, 그럴게!"라고 대답해보세요!`,
+            typeBadge: "약속 동의 ➔ Okay, I will 사용!",
+            hintEn: `Okay, I will.`,
+            hintKr: `[장소/시간 지시에 동의할 때] 알았어, 그럴게.`,
+            target: ["okay i will", "okay", "i will"],
+            systemReplyEn: `See you then!`,
+            systemReplyKr: `그때 보자!`
           }
         ];
       } else if (flowType === 1) {
-        // Pattern 1: 친구가 나를 초대 ➔ 거절 ➔ 다른 이벤트 초대 ➔ 수락
+        // 친구가 초대 -> 거절 -> 다른 초대 -> 기쁘게 수락
         activeDialogueSteps = [
           {
             initialSystemEn: `Can you come to the ${event1.en}? It's on ${date1}.`,
             initialSystemKr: `너 ${event1.kr}에 올 수 있니? ${date1}이야.`,
-            instruction: `1. (${reason.kr}) 이유를 대며 미안하지만 못 간다고 거절해보세요!`,
+            instruction: `[거절하기] (${reason.kr}) 이유를 대며 못 간다고 거절해 보세요!`,
             hintEn: `Sorry, but I can't. ${reason.en}`,
             hintKr: `미안하지만 안 되겠어. ${reason.kr}`,
             target: ["sorry", reason.key.toLowerCase()],
@@ -216,39 +218,43 @@
             systemReplyKr: `괜찮아. 그럼 ${date2}에 있는 ${event2.kr}에는 올 수 있니?`
           },
           {
-            instruction: `2. 기쁘게 수락해보세요!`,
+            instruction: `[초대 승낙] 친구의 초대에 "물론이지!"라고 승낙해 보세요!`,
+            typeBadge: "초대 승낙 ➔ Of course 사용!",
             hintEn: `Of course!`,
-            hintKr: `물론이지!`,
-            target: ["of course", "sure", "id love to"],
+            hintKr: `[초대에 승낙할 때] 물론이지!`,
+            target: ["of course", "sure"],
             systemReplyEn: `Awesome! Come to the ${place.en} ${time}.`,
             systemReplyKr: `신난다! ${time}에 ${place.kr}(으)로 와.`
           },
           {
-            instruction: `3. 알겠다고 최종 확인해보세요!`,
+            instruction: `[약속 동의] 몇 시까지 오라는 말에 "알았어, 그럴게!"라고 약속해보세요!`,
+            typeBadge: "약속 동의 ➔ Okay, I will 사용!",
             hintEn: `Okay, I will.`,
-            hintKr: `알았어, 그럴게.`,
+            hintKr: `[장소/시간 지시에 동의할 때] 알았어, 그럴게.`,
             target: ["okay i will", "okay", "i will"],
             systemReplyEn: `Great! See you soon!`,
             systemReplyKr: `좋아! 곧 보자!`
           }
         ];
       } else {
-        // Pattern 2: 친구의 물음에 수락 ➔ 장소/시간 안내받음 ➔ 확인
+        // 친구 초대 -> 기쁘게 수락 -> 확인
         activeDialogueSteps = [
           {
             initialSystemEn: `Can you come to my ${event1.en}? It's ${date1}.`,
             initialSystemKr: `너 내 ${event1.kr}에 올 수 있니? ${date1}이야.`,
-            instruction: `1. 당연히 갈 수 있다고 수락해보세요!`,
-            hintEn: `Of course! I'd love to.`,
-            hintKr: `물론이지! 꼭 가고 싶어.`,
-            target: ["of course", "sure", "love to"],
+            instruction: `[초대 승낙] 친구의 초대에 "물론이지!"라고 승낙해 보세요!`,
+            typeBadge: "초대 승낙 ➔ Of course 사용!",
+            hintEn: `Of course!`,
+            hintKr: `[초대에 승낙할 때] 물론이지!`,
+            target: ["of course", "sure"],
             systemReplyEn: `Great! Come to ${place.en} ${time}.`,
             systemReplyKr: `좋아! ${time}에 ${place.kr}(으)로 와.`
           },
           {
-            instruction: `2. 알겠다고 대답하며 약속을 마무리해보세요!`,
+            instruction: `[약속 동의] 어디로 오라는 말에 "알았어, 그럴게!"라고 최종 답변해 보세요!`,
+            typeBadge: "약속 동의 ➔ Okay, I will 사용!",
             hintEn: `Okay, I will.`,
-            hintKr: `알았어, 그럴게.`,
+            hintKr: `[장소/시간 지시에 동의할 때] 알았어, 그럴게.`,
             target: ["okay i will", "okay", "i will"],
             systemReplyEn: `See you there!`,
             systemReplyKr: `거기서 보자!`
@@ -261,12 +267,18 @@
 
     window.onload = () => {
       initSTT();
-      generateNewScenario();
+      generateScenario();
 
       document.getElementById('speed').addEventListener('input', (e) => {
         document.getElementById('speed-val').innerText = e.target.value;
       });
     };
+
+    function resetToStage1() {
+      stage = 1;
+      document.getElementById('stage-badge').innerText = `🏆 STAGE 1`;
+      generateScenario();
+    }
 
     function resetChatUI() {
       document.getElementById('chat').innerHTML = '';
@@ -294,8 +306,10 @@
       if (currentStepIdx >= activeDialogueSteps.length) return;
 
       const current = activeDialogueSteps[currentStepIdx];
-      
+      const badgeHtml = current.typeBadge ? `<div style="margin-bottom:4px;"><span class="badge-tag">${current.typeBadge}</span></div>` : '';
+
       document.getElementById('hint').innerHTML = `
+        ${badgeHtml}
         <div class="hint-title">💡 ${current.instruction}</div>
         <div style="margin-top: 5px;">
           <span class="blur-text" onclick="toggleBlur(this)">
@@ -358,7 +372,6 @@
       recognition.onend = () => {
         isListening = false;
         document.getElementById('mic-btn').classList.remove('listening');
-        document.getElementById('status').innerText = '마이크 버튼을 누르고 영어로 말해보세요!';
       };
 
       recognition.onresult = (event) => {
@@ -394,16 +407,34 @@
           if (currentStepIdx < activeDialogueSteps.length) {
             setTimeout(showUserTurnHint, 1800);
           } else {
+            // Stage Clear!
+            stage++;
+            document.getElementById('stage-badge').innerText = `🏆 STAGE ${stage}`;
             document.getElementById('progress').style.width = '100%';
             document.getElementById('hint').innerHTML = `
-              <div class="hint-title">🎉 완벽합니다! 성공적으로 대화를 마쳤습니다!</div>
-              <div>상단의 '🔄 새로운 랜덤 대화 생성' 버튼을 눌러 또 다른 대화를 연습해보세요!</div>
+              <div class="hint-title" style="color:#2e7d32; font-size:1.1rem;">🎉 STAGE ${stage - 1} 클리어!</div>
+              <div>축하합니다! 잠시 후 다음 스테이지가 시작됩니다.</div>
             `;
+            setTimeout(() => {
+              generateScenario();
+            }, 2500);
           }
         }, 1000);
 
       } else {
-        document.getElementById('status').innerText = '핵심 단어가 인식되지 않았어요. 힌트를 확인하고 다시 시도해보세요!';
+        // 틀렸을 경우: STAGE 1 리셋!
+        document.getElementById('status').innerText = '❌ 틀렸습니다! STAGE 1로 처음부터 다시 도전해보세요!';
+        stage = 1;
+        document.getElementById('stage-badge').innerText = `🏆 STAGE 1`;
+        
+        document.getElementById('hint').innerHTML = `
+          <div class="hint-title" style="color:#d32f2f;">💥 틀렸습니다! STAGE 1로 돌아갑니다.</div>
+          <div>올바른 표현을 확인하고 다시 도전해보세요!</div>
+        `;
+
+        setTimeout(() => {
+          generateScenario();
+        }, 3000);
       }
     }
   </script>
