@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lesson 7. Can You Come to the Movie Festival?</title>
+  <title>Lesson 7. Interactive Conversation Master</title>
   <style>
     :root {
       --bg-color: #e0f7fa;
@@ -18,8 +18,8 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'MaruBuri', 'Arial', sans-serif; }
     body { background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
     
-    header { text-align: center; margin-bottom: 20px; width: 100%; max-width: 800px; }
-    h1 { color: var(--primary-color); font-size: 1.8rem; margin-bottom: 15px; }
+    header { text-align: center; margin-bottom: 15px; width: 100%; max-width: 800px; }
+    h1 { color: var(--primary-color); font-size: 1.8rem; margin-bottom: 12px; }
     
     .controls { background: var(--card-bg); padding: 12px 20px; border-radius: 30px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .speed-control { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: bold; }
@@ -27,28 +27,48 @@
     .btn-reset { background-color: #eceff1; color: #455a64; }
     .btn-reset:hover { background-color: #cfd8dc; }
 
-    .scenario-select { display: flex; gap: 8px; overflow-x: auto; width: 100%; max-width: 800px; margin-bottom: 20px; padding: 5px 0; }
-    .scenario-btn { background: var(--card-bg); border: 2px solid var(--primary-color); color: var(--primary-color); padding: 8px 14px; border-radius: 15px; cursor: pointer; white-space: nowrap; font-size: 0.9rem; }
-    .scenario-btn.active { background: var(--primary-color); color: #fff; }
+    .progress-bar-container { width: 100%; max-width: 800px; background: #b2ebf2; height: 10px; border-radius: 5px; margin-bottom: 15px; overflow: hidden; }
+    .progress-bar { width: 0%; height: 100%; background: var(--primary-color); transition: width 0.3s ease; }
 
-    main { width: 100%; max-width: 800px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.08); padding: 20px; display: flex; flex-direction: column; height: 500px; }
+    main { width: 100%; max-width: 800px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.08); padding: 20px; display: flex; flex-direction: column; height: 520px; }
     
-    .chat-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 10px; }
-    .message { display: flex; flex-direction: column; max-width: 75%; animation: fadeIn 0.3s ease; }
+    .chat-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 10px; }
+    .message { display: flex; flex-direction: column; max-width: 80%; animation: fadeIn 0.3s ease; }
     .message.system { align-self: flex-start; }
     .message.user { align-self: flex-end; }
     
-    .bubble { padding: 12px 16px; border-radius: 18px; font-size: 1rem; line-height: 1.4; position: relative; }
+    .speaker-tag { font-size: 0.75rem; font-weight: bold; margin-bottom: 3px; color: #78909c; }
+    .user .speaker-tag { text-align: right; }
+
+    .bubble { padding: 12px 16px; border-radius: 18px; font-size: 1.05rem; line-height: 1.4; position: relative; }
     .system .bubble { background: var(--system-bubble); border-bottom-left-radius: 4px; color: #0277bd; }
     .user .bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; color: #e65100; }
-    .sub-text { font-size: 0.75rem; color: #78909c; margin-top: 4px; }
+    .sub-text { font-size: 0.8rem; color: #78909c; margin-top: 5px; }
+
+    .blur-text {
+      filter: blur(6px);
+      cursor: pointer;
+      transition: filter 0.25s ease, background-color 0.25s ease;
+      background-color: rgba(0, 0, 0, 0.06);
+      border-radius: 4px;
+      padding: 2px 6px;
+      user-select: none;
+      display: inline-block;
+    }
+    .blur-text.revealed {
+      filter: blur(0);
+      background-color: transparent;
+    }
+    .blur-hint { font-size: 0.7rem; color: #90a4ae; margin-left: 5px; font-weight: normal; }
 
     .action-panel { border-top: 1px solid #eceff1; padding-top: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    .hint-box { background: #fffde7; border: 1px dashed #fbc02d; padding: 10px 15px; border-radius: 10px; font-size: 0.9rem; text-align: center; width: 100%; }
     
-    .mic-btn { width: 60px; height: 60px; border-radius: 50%; border: none; background: var(--accent-color); color: white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,112,67,0.4); transition: transform 0.2s; }
+    .hint-box { background: #fffde7; border: 1px dashed #fbc02d; padding: 12px 18px; border-radius: 12px; font-size: 0.95rem; text-align: center; width: 100%; }
+    .hint-title { font-weight: bold; color: #f57f17; margin-bottom: 4px; font-size: 0.85rem; }
+
+    .mic-btn { width: 64px; height: 64px; border-radius: 50%; border: none; background: var(--accent-color); color: white; font-size: 1.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,112,67,0.4); transition: transform 0.2s; }
     .mic-btn.listening { animation: pulse 1.2s infinite; background: #e53935; }
-    .status-text { font-size: 0.85rem; color: #78909c; }
+    .status-text { font-size: 0.85rem; color: #78909c; font-weight: bold; }
 
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -57,126 +77,158 @@
 <body>
 
   <header>
-    <h1>🎬 Lesson 7. 대화형 Role-Play 🍿</h1>
+    <h1>🎬 Lesson 7. 대화 주고받기 마스터 🍿</h1>
     <div class="controls">
       <div class="speed-control">
         <label for="speed">🔊 말하기 속도:</label>
         <input type="range" id="speed" min="0.6" max="1.1" step="0.1" value="0.9">
         <span id="speed-val">0.9</span>
       </div>
-      <button class="btn btn-reset" onclick="resetChat()">🔄 다시 시작</button>
+      <button class="btn btn-reset" onclick="resetChat()">🔄 대화 처음부터 시작</button>
     </div>
   </header>
 
-  <div class="scenario-select" id="scenario-list"></div>
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progress"></div>
+  </div>
 
   <main>
     <div class="chat-container" id="chat"></div>
     
     <div class="action-panel">
-      <div class="hint-box" id="hint">상황을 선택하고 말하기 버튼을 눌러보세요!</div>
+      <div class="hint-box" id="hint">
+        <div class="hint-title">💡 [내 차례] 무엇을 말해야 할까요?</div>
+        <div id="hint-content">준비가 되면 마이크 버튼을 눌러보세요!</div>
+      </div>
       <button class="mic-btn" id="mic-btn" onclick="toggleListening()">🎤</button>
-      <div class="status-text" id="status">마이크 버튼을 누르면 인식이 시작됩니다.</div>
+      <div class="status-text" id="status">마이크 버튼을 누르고 영어로 말해보세요! (문장은 클릭하면 보입니다)</div>
     </div>
   </main>
 
   <script>
-    // 7단원 교과서 데이터
-    const scenarios = [
+    // 자연스러운 연결을 위한 시나리오 설계
+    const dialogueFlow = [
       {
-        title: "영화 축제 초대",
-        steps: [
-          { system: "Can you come to the movie festival? It's on August 27th.", systemKr: "너는 영화 축제에 올 수 있니? 8월 27일이야.", target: ["of course", "sure", "i can"], next: 1 },
-          { system: "Great! Come to the river park at 6.", systemKr: "좋아! 6시에 강가 공원으로 와.", target: ["okay i will", "okay", "i will"], next: "end" }
-        ]
+        step: 1,
+        instruction: "1. 친구가 영화 축제에 가고 싶대요. 올 수 있는지 물어보세요!",
+        hintEn: "Can you come to the movie festival?",
+        hintKr: "너 영화 축제에 올 수 있니?",
+        target: ["can you come to the movie festival", "come to the movie festival"],
+        systemReplyEn: "Of course! When is the movie festival?",
+        systemReplyKr: "물론 가지! 영화 축제가 언제니?"
       },
       {
-        title: "책 축제 초대",
-        steps: [
-          { system: "Can you come to the book festival? It's on August 12th.", systemKr: "너는 책 축제에 올 수 있니? 8월 12일이야.", target: ["of course", "sure"], next: 1 },
-          { system: "Come to the school library at 2.", systemKr: "2시에 학교 도서관으로 와.", target: ["okay i will", "okay"], next: "end" }
-        ]
+        step: 2,
+        instruction: "2. 영화 축제 날짜(8월 27일)를 알려주세요!",
+        hintEn: "It's on August 27th.",
+        hintKr: "8월 27일이야.",
+        target: ["its on august 27th", "august 27th", "august 27"],
+        systemReplyEn: "Great! How about you? Can you come to the laser show on October 4th?",
+        systemReplyKr: "좋아! 너는 어때? 10월 4일에 있는 레이저 공연에 올 수 있니?"
       },
       {
-        title: "요리 교실 초대 (수락)",
-        steps: [
-          { system: "Can you come to the cooking class party? It's this Saturday.", systemKr: "너는 요리 교실 잔치에 올 수 있니? 이번 주 토요일이야.", target: ["of course", "sure"], next: 1 },
-          { system: "We'll bake chocolate biscuits. Come to the school kitchen at 11.", systemKr: "우리는 초콜릿 비스킷을 구울 거야. 11시에 학교 조리실로 와.", target: ["okay i will", "great"], next: "end" }
-        ]
+        step: 3,
+        instruction: "3. 야구 경기가 있어서 못 간다고 거절해보세요!",
+        hintEn: "Sorry, but I can't. I have a baseball game.",
+        hintKr: "미안하지만 안 되겠어. 나는 야구 경기가 있어.",
+        target: ["sorry but i cant i have a baseball game", "sorry i cant i have a baseball game", "sorry i cant", "i have a baseball game"],
+        systemReplyEn: "That's okay. Good luck! Then can you come to the cooking class party this Saturday?",
+        systemReplyKr: "괜찮아. 행운을 빌게! 그럼 이번 주 토요일 요리 교실 잔치에는 올 수 있니?"
       },
       {
-        title: "야구 경기 거절",
-        steps: [
-          { system: "Can you come to the laser show? It's on October 4th.", systemKr: "너는 레이저 공연에 올 수 있니? 10월 4일이야.", target: ["sorry but i can't i have a baseball game", "sorry i can't", "sorry"], next: "decline_end" }
-        ]
+        step: 4,
+        instruction: "4. 기쁘게 수락하며 대답해보세요!",
+        hintEn: "Of course!",
+        hintKr: "물론이지!",
+        target: ["of course", "sure", "id love to"],
+        systemReplyEn: "Awesome! We'll bake chocolate biscuits. Come to the school kitchen at 11.",
+        systemReplyKr: "신난다! 우리는 초콜릿 비스킷을 구울 거야. 11시에 학교 조리실로 와."
+      },
+      {
+        step: 5,
+        instruction: "5. 알겠다고 약속을 최종 확인해보세요!",
+        hintEn: "Okay, I will.",
+        hintKr: "알았어, 그럴게.",
+        target: ["okay i will", "okay", "i will"],
+        systemReplyEn: "Great! See you this Saturday at 11!",
+        systemReplyKr: "좋아! 이번 주 토요일 11시에 보자!"
       }
     ];
 
-    let currentScenarioIdx = 0;
     let currentStepIdx = 0;
     let recognition;
     let isListening = false;
 
-    // 초기화
     window.onload = () => {
-      initScenarioButtons();
       initSTT();
-      loadScenario(0);
+      resetChat();
 
       document.getElementById('speed').addEventListener('input', (e) => {
         document.getElementById('speed-val').innerText = e.target.value;
       });
     };
 
-    function initScenarioButtons() {
-      const container = document.getElementById('scenario-list');
-      scenarios.forEach((s, i) => {
-        const btn = document.createElement('button');
-        btn.className = `scenario-btn ${i === 0 ? 'active' : ''}`;
-        btn.innerText = s.title;
-        btn.onclick = () => {
-          document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          loadScenario(i);
-        };
-        container.appendChild(btn);
-      });
-    }
-
-    function loadScenario(idx) {
-      currentScenarioIdx = idx;
-      resetChat();
-    }
-
     function resetChat() {
       document.getElementById('chat').innerHTML = '';
       currentStepIdx = 0;
-      processStep();
+      updateProgress();
+      
+      // 시스템이 먼저 말을 걸며 대화 시작
+      setTimeout(() => {
+        const initialEn = "I want to go to the movie festival!";
+        const initialKr = "나 영화 축제에 가고 싶어!";
+        addMessage('system', initialEn, initialKr);
+        speak(initialEn);
+        showUserTurnHint();
+      }, 500);
     }
 
-    function processStep() {
-      const step = scenarios[currentScenarioIdx].steps[currentStepIdx];
-      addMessage('system', step.system, step.systemKr);
-      speak(step.system);
+    function updateProgress() {
+      const pct = (currentStepIdx / dialogueFlow.length) * 100;
+      document.getElementById('progress').style.width = `${pct}%`;
+    }
 
-      // 힌트 제공
-      const hintText = step.target[0];
-      document.getElementById('hint').innerHTML = `💡 **따라 말해보기:** "${hintText}"`;
+    function showUserTurnHint() {
+      if (currentStepIdx >= dialogueFlow.length) return;
+
+      const current = dialogueFlow[currentStepIdx];
+      
+      document.getElementById('hint').innerHTML = `
+        <div class="hint-title">💡 ${current.instruction}</div>
+        <div style="margin-top: 5px;">
+          <span class="blur-text" onclick="toggleBlur(this)">
+            ${current.hintEn} <br><small>(${current.hintKr})</small>
+          </span>
+          <span class="blur-hint">👈 클릭해서 힌트 보기</span>
+        </div>
+      `;
     }
 
     function addMessage(sender, text, subText) {
       const chat = document.getElementById('chat');
       const msgDiv = document.createElement('div');
       msgDiv.className = `message ${sender}`;
+      
+      const speakerName = sender === 'system' ? '🤖 친구' : '👤 나';
+      
       msgDiv.innerHTML = `
-        <div class="bubble">${text}</div>
-        <div class="sub-text">${subText || ''}</div>
+        <div class="speaker-tag">${speakerName}</div>
+        <div class="bubble">
+          <span class="blur-text" onclick="toggleBlur(this)">${text}</span>
+        </div>
+        <div class="sub-text">
+          <span class="blur-text" onclick="toggleBlur(this)">${subText || ''}</span>
+        </div>
       `;
+      
       chat.appendChild(msgDiv);
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // TTS 기능
+    function toggleBlur(element) {
+      element.classList.toggle('revealed');
+    }
+
     function speak(text) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
@@ -185,7 +237,6 @@
       window.speechSynthesis.speak(utterance);
     }
 
-    // STT 기능 (음성 인식)
     function initSTT() {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 브라우저를 사용해 주세요.');
@@ -205,7 +256,7 @@
       recognition.onend = () => {
         isListening = false;
         document.getElementById('mic-btn').classList.remove('listening');
-        document.getElementById('status').innerText = '마이크 버튼을 누르면 인식이 시작됩니다.';
+        document.getElementById('status').innerText = '마이크 버튼을 누르고 영어로 말해보세요!';
       };
 
       recognition.onresult = (event) => {
@@ -223,32 +274,34 @@
     }
 
     function handleUserSpeech(speech) {
-      addMessage('user', speech, '내가 한 말');
-      const currentStep = scenarios[currentScenarioIdx].steps[currentStepIdx];
+      const current = dialogueFlow[currentStepIdx];
       
-      // 구두점 제거 및 소문자 변환 후 비교
+      addMessage('user', speech, '내가 한 말');
+
       const cleanSpeech = speech.toLowerCase().replace(/[^a-z0-9 ]/g, '');
-      const isCorrect = currentStep.target.some(target => cleanSpeech.includes(target.toLowerCase()));
+      const isCorrect = current.target.some(target => cleanSpeech.includes(target.toLowerCase()));
 
       if (isCorrect) {
-        if (currentStep.next === 'end') {
-          setTimeout(() => {
-            addMessage('system', 'Great job! Conversation finished.', '잘했어요! 대화가 완료되었습니다.');
-            speak('Great job!');
-            document.getElementById('hint').innerHTML = '🎉 **대화 완료! 다른 상황을 선택해보세요.**';
-          }, 1000);
-        } else if (currentStep.next === 'decline_end') {
-          setTimeout(() => {
-            addMessage('system', "That's okay. Good luck!", '괜찮아. 행운을 빌게!');
-            speak("That's okay. Good luck!");
-            document.getElementById('hint').innerHTML = '🎉 **대화 완료! 다른 상황을 선택해보세요.**';
-          }, 1000);
-        } else {
-          currentStepIdx = currentStep.next;
-          setTimeout(processStep, 1500);
-        }
+        currentStepIdx++;
+        updateProgress();
+
+        setTimeout(() => {
+          addMessage('system', current.systemReplyEn, current.systemReplyKr);
+          speak(current.systemReplyEn);
+
+          if (currentStepIdx < dialogueFlow.length) {
+            setTimeout(showUserTurnHint, 2000);
+          } else {
+            document.getElementById('progress').style.width = '100%';
+            document.getElementById('hint').innerHTML = `
+              <div class="hint-title">🎉 축하합니다! 대화를 완벽하게 마쳤습니다!</div>
+              <div>상단의 '🔄 대화 처음부터 시작'을 눌러 다시 연습할 수 있습니다.</div>
+            `;
+          }
+        }, 1000);
+
       } else {
-        document.getElementById('status').innerText = '다시 한 번 정해진 문장으로 말씀해 보세요!';
+        document.getElementById('status').innerText = '유사한 문장으로 인식되지 않았어요. 힌트를 확인하고 다시 시도해보세요!';
       }
     }
   </script>
