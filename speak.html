@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lesson 7. Stage Game - Retry Mode</title>
+  <title>Lesson 7. Stage Game - Fuzzy Matching Mode</title>
   <style>
     :root {
       --bg-color: #e0f7fa;
@@ -144,12 +144,21 @@
       ]
     };
 
+    // STT 오인식 보정 맵
+    const sttFixMap = {
+      "throne": "drone",
+      "thrown": "drone",
+      "drawn": "drone",
+      "lazer": "laser",
+      "take one do": "taekwondo"
+    };
+
     let stage = 1;
     let activeDialogueSteps = [];
     let currentStepIdx = 0;
     let recognition;
     let isListening = false;
-    let isFailedState = false; // 오답 시 따라 말하기 모드 플래그
+    let isFailedState = false;
 
     function getRandom(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
@@ -159,6 +168,38 @@
       const day = getRandom(db.days);
       if (day.includes('this') || day === 'tomorrow') return day;
       return `${getRandom(db.months)} ${day}`;
+    }
+
+    // 유사도 계산 (Levenshtein Distance)
+    function getSimilarity(s1, s2) {
+      const len1 = s1.length;
+      const len2 = s2.length;
+      const matrix = Array.from({ length: len1 + 1 }, () => Array(len2 + 1).fill(0));
+
+      for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+      for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+
+      for (let i = 1; i <= len1; i++) {
+        for (let j = 1; j <= len2; j++) {
+          const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j - 1] + cost
+          );
+        }
+      }
+      const maxLen = Math.max(len1, len2);
+      return maxLen === 0 ? 1 : 1 - matrix[len1][len2] / maxLen;
+    }
+
+    // STT 입력 정제 및 단어 치환
+    function cleanAndFixSTT(text) {
+      let cleaned = text.toLowerCase().replace(/[^a-z0-9 ]/g, '');
+      for (const [wrong, right] of Object.entries(sttFixMap)) {
+        cleaned = cleaned.replace(new RegExp(`\\b${wrong}\\b`, 'g'), right);
+      }
+      return cleaned;
     }
 
     function generateScenario() {
@@ -390,10 +431,16 @@
       const current = activeDialogueSteps[currentStepIdx];
       addMessage('user', speech, '내가 한 말');
 
-      const cleanSpeech = speech.toLowerCase().replace(/[^a-z0-9 ]/g, '');
-      const isCorrect = current.target.some(target => cleanSpeech.includes(target.toLowerCase()));
+      const cleanSpeech = cleanAndFixSTT(speech);
 
-      // 오답 따라 말하기 모드 상태인 경우
+      // 정답 판정: 1) 포함 여부 2) 문장 유사도 70% 이상
+      const isCorrect = current.target.some(target => {
+        const cleanTarget = cleanAndFixSTT(target);
+        if (cleanSpeech.includes(cleanTarget)) return true;
+        return getSimilarity(cleanSpeech, cleanTarget) >= 0.7;
+      });
+
+      // 오답 후 따라 말하기 상태
       if (isFailedState) {
         if (isCorrect) {
           document.getElementById('status').innerText = '👍 정답을 잘 따라 하셨습니다! Stage 1부터 다시 시작합니다.';
@@ -405,13 +452,13 @@
             generateScenario();
           }, 2000);
         } else {
-          document.getElementById('status').innerText = '❌ 아직 정답 문장과 다릅니다. 화면에 보이는 정답을 그대로 읽어보세요!';
+          document.getElementById('status').innerText = '❌ 아직 정답 문장과 다릅니다. 화면에 보이는 정답을 읽어보세요!';
           speak(current.hintEn);
         }
         return;
       }
 
-      // 일반 대화 진행 중인 경우
+      // 일반 진행
       if (isCorrect) {
         currentStepIdx++;
         updateProgress();
@@ -423,7 +470,7 @@
           if (currentStepIdx < activeDialogueSteps.length) {
             setTimeout(showUserTurnHint, 1800);
           } else {
-            // Stage Clear!
+            // Stage Clear
             stage++;
             document.getElementById('stage-badge').innerText = `🏆 STAGE ${stage}`;
             document.getElementById('progress').style.width = '100%';
@@ -438,7 +485,7 @@
         }, 1000);
 
       } else {
-        // 오답 발생 시 -> 따라 말하기 안내 모드로 전환
+        // 오답 발생시
         isFailedState = true;
         document.getElementById('status').innerText = '❌ 틀렸습니다! 정답을 똑같이 따라 말해야 Stage 1부터 재시작됩니다.';
         
@@ -449,7 +496,7 @@
           </div>
           <div style="color: #555; font-size: 0.9rem;">(${current.hintKr})</div>
           <div style="margin-top: 8px; font-size: 0.85rem; color: #d81b60; font-weight: bold;">
-            👇 마이크를 누르고 위 문장을 정확히 똑같이 읽어주세요!
+            👇 마이크를 누르고 위 문장을 읽어주세요!
           </div>
         `;
 
